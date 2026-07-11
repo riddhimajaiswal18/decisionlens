@@ -1,0 +1,20 @@
+[
+  {
+    "sha": "a9f4c20",
+    "author": "noah",
+    "timestamp": "2026-04-28T11:15:00Z",
+    "message": "Decision: cache Supabase profile lookups in Redis for five minutes. Tradeoff: stale role changes can remain visible until invalidation."
+  },
+  {
+    "sha": "bc3d881",
+    "author": "priya",
+    "timestamp": "2026-05-16T08:50:00Z",
+    "message": "Architecture Change: move report generation from request handlers to background jobs backed by PostgreSQL."
+  },
+  {
+    "sha": "d72e6aa",
+    "author": "liam",
+    "timestamp": "2026-05-27T13:30:00Z",
+    "message": "Status: Kafka billing-audit consumer is running in production with dead-letter monitoring enabled."
+  }
+]

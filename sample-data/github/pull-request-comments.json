@@ -1,0 +1,23 @@
+[
+  {
+    "id": "pr-184-c1",
+    "pull_request": "pr-184",
+    "author": "liam",
+    "timestamp": "2026-05-04T10:02:00Z",
+    "content": "The PostgreSQL envelope is the right boundary. Decision: Stripe retries must reuse the stored event id as the idempotency key."
+  },
+  {
+    "id": "pr-191-c1",
+    "pull_request": "pr-191",
+    "author": "zoe",
+    "timestamp": "2026-05-12T15:10:00Z",
+    "content": "Status: accepted for the first release. Open Question: should Redis session keys be partitioned by Supabase project during migration?"
+  },
+  {
+    "id": "pr-205-c1",
+    "pull_request": "pr-205",
+    "author": "maya",
+    "timestamp": "2026-05-23T17:05:00Z",
+    "content": "Alternative: send audit events directly from Stripe to the warehouse. Tradeoff: Kafka keeps internal consumers decoupled and preserves ordering."
+  }
+]

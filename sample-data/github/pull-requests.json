@@ -1,0 +1,23 @@
+[
+  {
+    "id": "pr-184",
+    "title": "Persist Stripe webhook envelopes before dispatch",
+    "author": "maya",
+    "timestamp": "2026-05-04T09:20:00Z",
+    "content": "Decision: persist every Stripe webhook envelope in PostgreSQL before publishing a Kafka event.\nTradeoff: the extra write increases webhook latency slightly, but gives us replay and idempotency.\nArchitecture Change: the webhook worker now reads pending envelopes from the background jobs queue."
+  },
+  {
+    "id": "pr-191",
+    "title": "Move session revocation to Redis",
+    "author": "noah",
+    "timestamp": "2026-05-12T14:05:00Z",
+    "content": "Decision: store active session identifiers in Redis with a 24 hour TTL.\nAlternative: use stateless JWTs without a server-side session registry.\nTradeoff: Redis becomes a dependency for authentication, but revocation is immediate."
+  },
+  {
+    "id": "pr-205",
+    "title": "Add Kafka consumer for billing audit events",
+    "author": "priya",
+    "timestamp": "2026-05-23T16:40:00Z",
+    "content": "Decision: publish billing audit events to Kafka after the PostgreSQL transaction commits.\nArchitecture Change: background jobs now retry failed audit projections from Kafka offsets.\nOpen Question: do we need a compacted topic for current subscription state?"
+  }
+]

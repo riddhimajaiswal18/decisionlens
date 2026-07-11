@@ -1,0 +1,9 @@
+export type Evidence = { content: string; original_snippet: string; source_location?: string | null; artifact_reference?: string | null; extraction_confidence?: number | null }
+export type Insight = { id: string; title: string; summary: string; confidence: number; timestamp: string; evidence: Evidence[]; related_artifacts: string[]; related_entities: string[] }
+export type TimelineEvent = { timestamp: string; decision: string; reason?: string | null; confidence: number; evidence: Evidence[] }
+export type ArchitectureTimeline = Insight & { events: TimelineEvent[] }
+export type RecurringDiscussion = Insight & { topic: string; discussion_count: number; status?: string | null; last_discussed?: string | null }
+export type TechnologyTrend = Insight & { technology: string; discussion_count: number; accepted_count: number; rejected_count: number; is_new: boolean; is_deprecated: boolean }
+export type DecisionHistory = Insight & { decision: string; history: TimelineEvent[]; reasons: string[]; participants: string[]; timestamps: string[] }
+export type HistoricalContext = Insight & { topic: string; previous_decisions: string[]; tradeoffs: string[]; alternatives: string[]; architecture_changes: string[] }
+export type QueryResults = Record<string, Insight[]>
