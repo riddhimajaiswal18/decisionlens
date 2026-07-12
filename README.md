@@ -77,6 +77,24 @@ pnpm dev
 
 Set `VITE_API_BASE_URL` when the API runs anywhere other than `http://localhost:8000/api/v1`.
 
+## Local LLM extraction
+
+DecisionLens keeps EKPP independent of model vendors through its `StructuredExtractionClient`
+boundary. Set `EXTRACTION_PROVIDER=ollama` to use the asynchronous local Ollama provider;
+set `EXTRACTION_PROVIDER=demo` for the deterministic, offline fixture extractor.
+
+1. Install [Ollama](https://ollama.com/), then run `ollama serve`.
+2. Download the default model with `ollama pull qwen3:8b`.
+3. Configure `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, and `OLLAMA_TIMEOUT` in `.env` as needed.
+4. Run `python scripts/seed.py`.
+
+The Ollama provider requests JSON mode and validates every returned fact against the existing
+Pydantic contracts. It accepts a fact only when each evidence excerpt occurs verbatim in the
+source artifact. Invalid JSON is repaired once; unavailable, timed-out, rate-limited, or
+malformed responses become empty extractions so ingestion continues. Prompt templates are
+held in `backend/app/memory/extractors/prompts.py` and can be overridden with
+`EXTRACTION_PROMPT_DIRECTORY` using files such as `decision.txt`.
+
 ## Screenshots
 
 | Overview | Ask DecisionLens | Architecture timeline |

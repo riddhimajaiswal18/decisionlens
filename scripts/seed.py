@@ -30,8 +30,11 @@ from backend.app.memory.deduplication.service import DefaultDeduplicationService
 from backend.app.memory.ekpp.engine import DefaultEngineeringKnowledgeProcessingPipeline
 from backend.app.memory.entity_resolution.interfaces import EntityCanonicalizer
 from backend.app.memory.entity_resolution.service import DefaultEntityResolver
-from backend.app.memory.extractors.interfaces import PromptProvider, StructuredExtractionClient
-from backend.app.memory.extractors.models import ExtractedEvidence, ExtractedFact, ExtractionType
+from backend.app.memory.extractors.config import get_extraction_settings
+from backend.app.memory.extractors.factory import create_structured_extraction_client
+from backend.app.memory.extractors.interfaces import PromptProvider
+from backend.app.memory.extractors.models import ExtractionType
+from backend.app.memory.extractors.prompts import PromptRegistry, PromptTemplates
 from backend.app.memory.extractors.service import (
     AlternativeExtractor, ArchitectureChangeExtractor, CompositeInformationExtractor,
     DecisionExtractor, EntityExtractor, OpenQuestionExtractor,
@@ -44,15 +47,6 @@ from backend.app.models import ArtifactEventType, ArtifactSource, SourceRecord
 
 DATA = ROOT / "sample-data"
 REPOSITORY = "atlas/engineering-platform"
-KNOWN_ENTITIES = ("Supabase", "Redis", "Stripe", "PostgreSQL", "Kafka", "background jobs", "RLS", "Markdown", "ADRs", "RFCs", "session")
-PREFIXES = {
-    "Decision:": ExtractionType.DECISION,
-    "Tradeoff:": ExtractionType.TRADEOFF,
-    "Alternative:": ExtractionType.ALTERNATIVE,
-    "Architecture Change:": ExtractionType.ARCHITECTURE_CHANGE,
-    "Open Question:": ExtractionType.OPEN_QUESTION,
-    "Status:": ExtractionType.STATUS,
-}
 
 
 class FixtureGitHubService:
@@ -83,38 +77,6 @@ class FixtureSlackService:
             for index, (author, timestamp, text) in enumerate(conversation["messages"]):
                 records.append(SourceRecord(source=ArtifactSource.SLACK, source_id=f"{channel_id}:{conversation['thread_ts']}:{index}", event_type=ArtifactEventType.THREAD, timestamp=parse_time(timestamp), author=author, title=conversation["channel"], raw_content=text, metadata={"channel_id": channel_id, "thread_ts": conversation["thread_ts"], "message_ts": f"{conversation['thread_ts']}{index:02d}"}))
         return records[:limit]
-
-
-class DemoPromptProvider(PromptProvider):
-    def get(self, extraction_type: ExtractionType) -> str:
-        return f"Extract source-grounded {extraction_type.value} facts."
-
-
-class DemoExtractionClient(StructuredExtractionClient):
-    """Deterministic fixture extractor that exercises EKPP without an LLM dependency."""
-
-    async def extract(self, *, prompt: str, artifact, extraction_type: ExtractionType) -> list[ExtractedFact]:
-        facts: list[ExtractedFact] = []
-        lines = [line.strip(" -\t") for line in artifact.raw_content.splitlines() if line.strip()]
-        for line_number, line in enumerate(lines, start=1):
-            detected = next(((prefix, kind) for prefix, kind in PREFIXES.items() if prefix in line), None)
-            if detected and detected[1] is extraction_type:
-                prefix, _ = detected
-                value = line.split(prefix, 1)[1].strip()
-                facts.append(self._fact(extraction_type, self._entity_for(line), value, line, line_number, artifact.author))
-            if extraction_type in {ExtractionType.ENTITY, ExtractionType.TOPIC}:
-                for entity in KNOWN_ENTITIES:
-                    if entity.casefold() in line.casefold():
-                        facts.append(self._fact(extraction_type, entity, entity if extraction_type is ExtractionType.ENTITY else f"Discussion involving {entity}", line, line_number, artifact.author))
-        return facts
-
-    @staticmethod
-    def _entity_for(line: str) -> str:
-        return next((entity for entity in KNOWN_ENTITIES if entity.casefold() in line.casefold()), "engineering platform")
-
-    @staticmethod
-    def _fact(kind: ExtractionType, entity: str, value: str, line: str, line_number: int, author: str) -> ExtractedFact:
-        return ExtractedFact(type=kind, entity=entity, value=value, participants=(author,), evidence=(ExtractedEvidence(excerpt=line, location=f"line {line_number}", supporting_text=line),), confidence=0.9)
 
 
 class DemoEntityCanonicalizer(EntityCanonicalizer):
@@ -152,7 +114,9 @@ def markdown_records() -> Iterable[SourceRecord]:
 
 
 def build_ekpp() -> DefaultEngineeringKnowledgeProcessingPipeline:
-    client, prompts = DemoExtractionClient(), DemoPromptProvider()
+    settings = get_extraction_settings()
+    client = create_structured_extraction_client(settings)
+    prompts: PromptProvider = PromptRegistry(PromptTemplates.from_directory(settings.prompt_directory))
     extractors = (DecisionExtractor(client, prompts), TradeoffExtractor(client, prompts), AlternativeExtractor(client, prompts), TopicExtractor(client, prompts), StatusExtractor(client, prompts), ArchitectureChangeExtractor(client, prompts), EntityExtractor(client, prompts), OpenQuestionExtractor(client, prompts))
     return DefaultEngineeringKnowledgeProcessingPipeline(extractor=CompositeInformationExtractor(extractors), entity_resolver=DefaultEntityResolver(DemoEntityCanonicalizer()), builder=DefaultKnowledgeObjectBuilder(), deduplication=DefaultDeduplicationService())
 

@@ -8,3 +8,4 @@ frontend/dist/
 frontend/*.tsbuildinfo
 frontend/.pnpm-store/
 .pnpm-store/
+tests/extraction/reports/
