@@ -1,10 +1,12 @@
 """Run the local Ollama extractor against the realistic conversation corpus."""
 
 from __future__ import annotations
-
+# 
+print("Runner started")
 import argparse
 import asyncio
 import json
+import logging
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -25,6 +27,7 @@ from tests.extraction.report import prompt_recommendations, write_reports
 
 DATA_DIRECTORY = Path(__file__).resolve().parent
 CATEGORIES = tuple(ExtractionType)
+logger = logging.getLogger(__name__)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -38,13 +41,9 @@ def render_conversation(conversation: dict[str, Any]) -> str:
 def make_artifact(conversation: dict[str, Any]) -> Artifact:
     first = conversation["messages"][0]
     return Artifact(
-        source=ArtifactSource.SLACK,
-        source_id=conversation["id"],
-        event_type=ArtifactEventType.THREAD,
-        timestamp=datetime.fromisoformat(first["timestamp"].replace("Z", "+00:00")),
-        author=first["author"],
-        title=conversation.get("channel", "#engineering"),
-        raw_content=render_conversation(conversation),
+        source=ArtifactSource.SLACK, source_id=conversation["id"], event_type=ArtifactEventType.THREAD,
+        timestamp=datetime.fromisoformat(first["timestamp"].replace("Z", "+00:00")), author=first["author"],
+        title=conversation.get("channel", "#engineering"), raw_content=render_conversation(conversation),
         metadata={"conversation_id": conversation["id"]},
     )
 
@@ -61,9 +60,7 @@ def expected_matches_actual(expected: dict[str, Any], actual: ExtractedFact, cat
     if not expected_terms or not expected_terms.issubset(actual_terms):
         return False
     evidence = expected.get("evidence")
-    if not evidence:
-        return True
-    return any(evidence in item.excerpt or item.excerpt in evidence for item in actual.evidence)
+    return not evidence or any(evidence in item.excerpt or item.excerpt in evidence for item in actual.evidence)
 
 
 def public_fact(fact: ExtractedFact) -> dict[str, Any]:
@@ -79,18 +76,36 @@ def possible_cause(category: str, missing: list[dict[str, Any]], unexpected: lis
 
 
 async def evaluate(conversations_directory: Path, expected_directory: Path, output_directory: Path) -> dict[str, Any]:
+     # 
+    print("entered evaluate")
+    print("Loading extraction settings...")
+   
     settings = get_extraction_settings().model_copy(update={"provider": "ollama"})
-    if not isinstance(settings, ExtractionSettings):  # Defensive guard for future settings changes.
+    if not isinstance(settings, ExtractionSettings):
         raise RuntimeError("Unable to load Ollama extraction settings.")
+     # 
+    print("Creating Ollama provider...")
     provider = OllamaProvider(settings)
+     # 
+    print("ollama provider created")
+    print("Loading prompts...")
     prompts = PromptRegistry(PromptTemplates.from_directory(settings.prompt_directory))
+    # 
+    print("✓ Prompts loaded")
     totals: dict[str, dict[str, int]] = defaultdict(lambda: {"tp": 0, "fp": 0, "fn": 0})
     failures: list[dict[str, Any]] = []
     call_count = validation_successes = extraction_failures = 0
     durations_ms: list[float] = []
     conversation_files = sorted(conversations_directory.glob("*.json"))
+    total_calls = len(conversation_files) * len(CATEGORIES)
+    # 
+    print(f"Found {len(conversation_files)} conversations")
     try:
+        logger.info("Starting extraction evaluation: conversations=%s calls=%s", len(conversation_files), total_calls)
         for conversation_path in conversation_files:
+             # 
+            print(f"\nProcessing {conversation_path.name}")
+          
             conversation = load_json(conversation_path)
             expected_path = expected_directory / conversation_path.name
             if not expected_path.exists():
@@ -98,46 +113,60 @@ async def evaluate(conversations_directory: Path, expected_directory: Path, outp
             expected = load_json(expected_path)
             if expected["id"] != conversation["id"]:
                 raise ValueError(f"Dataset ID mismatch in {conversation_path.name}")
-            artifact = make_artifact(conversation)
-            transcript = render_conversation(conversation)
+            artifact, transcript = make_artifact(conversation), render_conversation(conversation)
             for category in CATEGORIES:
                 call_count += 1
                 started = perf_counter()
                 try:
+                      # 
+                    print(f"Calling Ollama for {category.value}...")
+                    
+                    logger.info("[%s/%s] Conversation=%s Category=%s starting", call_count, total_calls, conversation["id"], category.value)
                     actual = await provider.extract(prompt=prompts.get(category), artifact=artifact, extraction_type=category)
-                    durations_ms.append((perf_counter() - started) * 1000)
-                    # The provider returns only Pydantic-validated facts. Round-tripping proves the public contract.
+                    # 
+                    print(f"Ollama call for {category.value} completed.")
+                  
+                    elapsed_ms = (perf_counter() - started) * 1000
+                    durations_ms.append(elapsed_ms)
                     actual = [ExtractedFact.model_validate(item.model_dump()) for item in actual]
                     validation_successes += 1
-                except Exception as exc:  # Evaluation must continue so failures are visible in the report.
-                    durations_ms.append((perf_counter() - started) * 1000)
+                    average_ms = sum(durations_ms) / len(durations_ms)
+                    eta_seconds = average_ms * (total_calls - call_count) / 1000
+                    logger.info(
+                        "[%s/%s] Conversation=%s Category=%s completed elapsed=%.1fs average=%.1fs eta=%.1fs facts=%s",
+                        call_count, total_calls, conversation["id"], category.value,
+                        elapsed_ms / 1000, average_ms / 1000, eta_seconds, len(actual),
+                    )
+                except Exception as exc:
+                    elapsed_ms = (perf_counter() - started) * 1000
+                    durations_ms.append(elapsed_ms)
                     extraction_failures += 1
                     actual = []
-                    failures.append({
-                        "conversation_id": conversation["id"], "category": category.value, "conversation": transcript,
+                    logger.error(
+                        "[%s/%s] Conversation=%s Category=%s failed elapsed=%.1fs exception_type=%s message=%r",
+                        call_count, total_calls, conversation["id"], category.value,
+                        elapsed_ms / 1000, type(exc).__name__, str(exc) or repr(exc),
+                    )
+                    logger.debug("Evaluation extraction traceback", exc_info=True)
+                    failures.append({"conversation_id": conversation["id"], "category": category.value, "conversation": transcript,
                         "expected": expected["facts"].get(category.value, []), "actual": {"error": str(exc)},
                         "missing": expected["facts"].get(category.value, []), "unexpected": [],
-                        "possible_cause": "The extraction client raised an exception before it returned a validated result.",
-                    })
-                expected_facts = expected["facts"].get(category.value, [])
-                unmatched_actual = list(actual)
-                missing: list[dict[str, Any]] = []
+                        "possible_cause": "The extraction client raised an exception before it returned a validated result."})
+                expected_facts, unmatched_actual, missing = expected["facts"].get(category.value, []), list(actual), []
                 for expected_fact in expected_facts:
-                    matched_index = next((index for index, fact in enumerate(unmatched_actual) if expected_matches_actual(expected_fact, fact, category)), None)
-                    if matched_index is None:
+                    match = next((index for index, fact in enumerate(unmatched_actual) if expected_matches_actual(expected_fact, fact, category)), None)
+                    if match is None:
                         totals[category.value]["fn"] += 1
                         missing.append(expected_fact)
                     else:
                         totals[category.value]["tp"] += 1
-                        unmatched_actual.pop(matched_index)
+                        unmatched_actual.pop(match)
                 totals[category.value]["fp"] += len(unmatched_actual)
                 if missing or unmatched_actual:
-                    failures.append({
-                        "conversation_id": conversation["id"], "category": category.value, "conversation": transcript,
-                        "expected": expected_facts, "actual": [public_fact(fact) for fact in actual],
-                        "missing": missing, "unexpected": [public_fact(fact) for fact in unmatched_actual],
-                        "possible_cause": possible_cause(category.value, missing, [public_fact(fact) for fact in unmatched_actual]),
-                    })
+                    unexpected = [public_fact(fact) for fact in unmatched_actual]
+                    failures.append({"conversation_id": conversation["id"], "category": category.value, "conversation": transcript,
+                        "expected": expected_facts, "actual": [public_fact(fact) for fact in actual], "missing": missing,
+                        "unexpected": unexpected, "possible_cause": possible_cause(category.value, missing, unexpected)})
     finally:
         await provider.aclose()
 
@@ -147,13 +176,11 @@ async def evaluate(conversations_directory: Path, expected_directory: Path, outp
         precision = counts["tp"] / (counts["tp"] + counts["fp"]) if counts["tp"] + counts["fp"] else 1.0
         recall = counts["tp"] / (counts["tp"] + counts["fn"]) if counts["tp"] + counts["fn"] else 1.0
         metrics[category.value] = {**counts, "precision": precision, "recall": recall, "accuracy": counts["tp"] / sum(counts.values()) if sum(counts.values()) else 1.0}
-    report = {
-        "conversation_count": len(conversation_files), "call_count": call_count,
+    report = {"conversation_count": len(conversation_files), "call_count": call_count,
         "average_extraction_time_ms": sum(durations_ms) / len(durations_ms) if durations_ms else 0.0,
         "json_validation_success_rate": validation_successes / call_count if call_count else 0.0,
         "extraction_failure_rate": extraction_failures / call_count if call_count else 0.0,
-        "metrics": metrics, "failures": failures,
-    }
+        "metrics": metrics, "failures": failures}
     report["prompt_recommendations"] = prompt_recommendations(metrics, failures)
     write_reports(report, output_directory)
     return report
@@ -164,10 +191,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--conversations", type=Path, default=DATA_DIRECTORY / "conversations")
     parser.add_argument("--expected", type=Path, default=DATA_DIRECTORY / "expected")
     parser.add_argument("--output", type=Path, default=DATA_DIRECTORY / "reports")
+    parser.add_argument("--debug", action="store_true", help="Include exception tracebacks in diagnostic logs.")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     result = asyncio.run(evaluate(args.conversations, args.expected, args.output))
     print(f"Evaluated {result['conversation_count']} conversations. Reports: {args.output}")
