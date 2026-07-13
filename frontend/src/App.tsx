@@ -1,139 +1,1502 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, BarChart3, Bot, CheckCircle2, DatabaseZap, FileText, GitPullRequest, GitBranch, LoaderCircle, Network, Route, Send, Sparkles, UploadCloud, Workflow, X } from 'lucide-react'
+import {
+  AlertCircle, BarChart3, Bot, Brain,
+  CheckCircle2, ChevronRight, DatabaseZap,
+  FileText, GitCommit, GitPullRequest, GitBranch, Globe,
+  Layers, LoaderCircle, Network, Route, Send, Shield,
+  Sparkles, TrendingUp, UploadCloud,
+  Workflow, X, Zap, Activity, Eye, Lock, Server, Cpu,
+  MessageSquare, Users, Award, Target, Flame,
+  History as HistoryIcon,
+} from 'lucide-react'
 import { PageShell, type Page } from './components/PageShell'
 import { demoContext, demoHistory, demoRecurring, demoTimeline, demoTrends } from './data/demo'
 import { api } from './services/api'
 import type { ArchitectureTimeline, DecisionHistory, HistoricalContext, RecurringDiscussion, TechnologyTrend } from './types'
 
-const formatDate = (date?: string | null) => date ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date)) : '—'
-const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <section className={`panel ${className}`}>{children}</section>
-const Title = ({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) => <div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-brand">{eyebrow}</p><h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">{description}</p></div>{action}</div>
-const Loading = () => <div className="flex min-h-50 items-center justify-center text-sm text-slate-400"><LoaderCircle className="mr-2 animate-spin" size={17}/> Loading intelligence…</div>
-const Pill = ({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 'slate' | 'brand' | 'green' }) => <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone === 'brand' ? 'bg-indigo-50 text-brand dark:bg-indigo-500/10 dark:text-indigo-300' : tone === 'green' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{children}</span>
-type SessionMemory = { id: string; title: string; summary: string; entity: string; kind: 'decision' | 'tradeoff' | 'alternative' | 'architecture_change' | 'open_question' | 'document'; source: string; evidence: string; timestamp: string }
-const kindLabel = (kind: SessionMemory['kind']) => kind.replace('_', ' ')
-const readFile = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result ?? '')); reader.onerror = reject; reader.readAsText(file) })
-const guessEntity = (text: string) => ['Supermemory','Supabase','Redis','Kafka','PostgreSQL','GitHub','Slack','Notion','Ollama','Markdown','RLS','Stripe'].find(entity => text.toLowerCase().includes(entity.toLowerCase())) ?? 'Engineering memory'
-function extractLocalMemories(filename: string, text: string): SessionMemory[] {
-  const rows = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
-  const patterns: [SessionMemory['kind'], RegExp][] = [
-    ['decision', /(?:^|\b)Decision\s*:\s*(.+)/i],
-    ['tradeoff', /(?:^|\b)Tradeoff\s*:\s*(.+)/i],
-    ['alternative', /(?:^|\b)Alternative\s*:\s*(.+)/i],
-    ['architecture_change', /(?:^|\b)Architecture Change\s*:\s*(.+)/i],
-    ['open_question', /(?:^|\b)Open Question\s*:\s*(.+)/i],
-  ]
-  const extracted = rows.flatMap((line, index) => patterns.flatMap(([kind, pattern]) => {
-    const match = line.match(pattern)
-    if (!match) return []
-    const value = match[1].trim()
-    return [{ id: `${filename}-${kind}-${index}`, title: value, summary: `${kindLabel(kind)} extracted locally from ${filename}.`, entity: guessEntity(line), kind, source: filename, evidence: line, timestamp: new Date().toISOString() }]
-  }))
-  if (extracted.length) return extracted
-  const heading = rows.find(line => line.startsWith('#'))?.replace(/^#+\s*/, '') || filename
-  const evidence = rows.find(line => !line.startsWith('#')) || 'Uploaded Markdown document was captured locally for demo memory.'
-  return [{ id: `${filename}-document-${Date.now()}`, title: heading, summary: `Uploaded Markdown captured as a local demo memory. Add "Decision:" or "Tradeoff:" lines for richer extraction.`, entity: guessEntity(text), kind: 'document', source: filename, evidence, timestamp: new Date().toISOString() }]
+/* ─── Utility helpers ─── */
+const fmt = (d?: string | null) => d
+  ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d))
+  : '—'
+
+/* ─── Reusable Primitives ─── */
+function SectionHeader({ eyebrow, title, desc, action }: {
+  eyebrow: string; title: string; desc: string; action?: React.ReactNode
+}) {
+  return (
+    <div className="section-header animate-fade-in">
+      <div>
+        <p className="section-eyebrow">{eyebrow}</p>
+        <h1 className="section-title">{title}</h1>
+        <p className="section-desc">{desc}</p>
+      </div>
+      {action}
+    </div>
+  )
 }
 
-function Dashboard() {
-  const pipeline = [
-    ['Sources', 'GitHub, Slack, Markdown', <GitBranch size={17}/>],
-    ['Ingest', 'Normalize artifacts', <Route size={17}/>],
-    ['Extract', 'Decisions and tradeoffs', <Sparkles size={17}/>],
-    ['Remember', 'Supermemory container', <DatabaseZap size={17}/>],
-    ['Explain', 'Evidence-backed answers', <Bot size={17}/>],
+function Panel({ children, className = '', style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  return <div className={`panel ${className}`} style={style}>{children}</div>
+}
+
+function Pill({ children, tone = 'slate' }: {
+  children: React.ReactNode
+  tone?: 'brand' | 'teal' | 'amber' | 'rose' | 'violet' | 'cyan' | 'green' | 'slate'
+}) {
+  return <span className={`pill pill-${tone}`}>{children}</span>
+}
+
+function Spinner() {
+  return (
+    <div className="flex min-h-52 items-center justify-center gap-3 text-sm text-slate-500">
+      <LoaderCircle size={18} className="animate-spin text-indigo-400" />
+      Loading intelligence…
+    </div>
+  )
+}
+
+/* ─── Inline SVG Bar Chart ─── */
+function BarChart({ data, height = 140, colorClass = 'chart-bar' }: {
+  data: { label: string; value: number; color?: string }[]
+  height?: number
+  colorClass?: string
+}) {
+  const max = Math.max(...data.map(d => d.value), 1)
+  return (
+    <div className="mt-4">
+      <div className="flex items-end gap-2" style={{ height }}>
+        {data.map((d, i) => (
+          <div key={d.label} className="group flex flex-1 flex-col items-center gap-1">
+            <span className="text-[11px] font-semibold text-slate-300 opacity-0 transition group-hover:opacity-100">
+              {d.value}
+            </span>
+            <div
+              className={`w-full rounded-t-md transition-all duration-700 ${d.color || colorClass}`}
+              style={{
+                height: `${(d.value / max) * (height - 20)}px`,
+                animationDelay: `${i * 80}ms`,
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        {data.map(d => (
+          <div key={d.label} className="flex-1 text-center text-[10px] text-slate-600 truncate">{d.label}</div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Inline SVG Donut / Pie Chart ─── */
+function DonutChart({ segments, size = 120, label }: {
+  segments: { value: number; color: string; label: string }[]
+  size?: number
+  label?: string
+}) {
+  const total = segments.reduce((s, d) => s + d.value, 0)
+  const r = 40; const cx = 50; const cy = 50
+  let offset = -90
+  const slices = segments.map(seg => {
+    const pct = seg.value / total
+    const deg = pct * 360
+    const start = offset; offset += deg
+    const toRad = (a: number) => (a * Math.PI) / 180
+    const x1 = cx + r * Math.cos(toRad(start))
+    const y1 = cy + r * Math.sin(toRad(start))
+    const x2 = cx + r * Math.cos(toRad(start + deg))
+    const y2 = cy + r * Math.sin(toRad(start + deg))
+    const large = deg > 180 ? 1 : 0
+    return { ...seg, path: `M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z`, pct }
+  })
+  return (
+    <div className="flex items-center gap-6">
+      <svg width={size} height={size} viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="50" fill="rgba(13,17,38,0.8)" />
+        {slices.map((s, i) => (
+          <path key={i} d={s.path} fill={s.color} opacity="0.85" className="transition hover:opacity-100">
+            <title>{s.label}: {s.value} ({(s.pct * 100).toFixed(1)}%)</title>
+          </path>
+        ))}
+        <circle cx="50" cy="50" r="28" fill="rgba(6,11,24,0.95)" />
+        {label && <text x="50" y="54" textAnchor="middle" fontSize="10" fill="#e2e8f0" fontWeight="700">{label}</text>}
+      </svg>
+      <div className="space-y-2">
+        {segments.map((s, i) => (
+          <div key={i} className="flex items-center gap-2 text-xs">
+            <span className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: s.color }} />
+            <span className="text-slate-400">{s.label}</span>
+            <span className="ml-auto font-semibold text-slate-200">{s.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Line Sparkline ─── */
+function Sparkline({ values, color = '#6366f1', height = 40 }: {
+  values: number[]; color?: string; height?: number
+}) {
+  const max = Math.max(...values)
+  const min = Math.min(...values)
+  const w = 120
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w
+    const y = height - ((v - min) / (max - min + 1)) * height
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  return (
+    <svg width={w} height={height} viewBox={`0 0 ${w} ${height}`}>
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5"
+        className="graph-line" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points={`0,${height} ${points} ${w},${height}`}
+        fill={color} fillOpacity="0.08"
+        stroke="none"
+      />
+    </svg>
+  )
+}
+
+/* ─── Pipeline Flowchart ─── */
+function PipelineFlow() {
+  const steps = [
+    { icon: <GitBranch size={14}/>,   label: 'Sources',  sub: 'GitHub · Slack · MD', color: '#6366f1' },
+    { icon: <Route size={14}/>,        label: 'Ingest',   sub: 'Normalize artifacts', color: '#8b5cf6' },
+    { icon: <Sparkles size={14}/>,     label: 'Extract',  sub: 'LLM knowledge extraction', color: '#14b8a6' },
+    { icon: <DatabaseZap size={14}/>,  label: 'Memory',   sub: 'Supermemory @ :6767', color: '#06b6d4' },
+    { icon: <Bot size={14}/>,          label: 'Intelligence', sub: 'Evidence-backed answers', color: '#f59e0b' },
   ]
-  const sources = [
-    ['GitHub', 'PRs, commits, comments', '21 artifacts'],
-    ['Slack', 'Threads and discussions', '14 threads'],
-    ['Markdown', 'ADRs, RFCs, notes', '7 documents'],
-  ]
-  return <>
-    <section className="mb-6 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="grid gap-0 lg:grid-cols-[1.15fr_.85fr]">
-        <div className="p-6 sm:p-8">
-          <div className="mb-5 flex flex-wrap gap-2"><Pill tone="green">Hackathon ready demo</Pill><Pill tone="brand">Supermemory backed</Pill><Pill>Runs locally</Pill></div>
-          <p className="text-xs font-semibold uppercase tracking-[.16em] text-brand">DecisionLens</p>
-          <h1 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">Turn engineering conversations into institutional memory.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">DecisionLens watches the places where engineers already decide things, extracts source-grounded knowledge objects, stores them in Supermemory, and gives teams a timeline, search, and evidence trail for every architectural choice.</p>
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">{[['48','Decisions'],['31','Tradeoffs'],['16','Architecture changes']].map(([value,label]) => <div key={label} className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"><p className="text-2xl font-semibold">{value}</p><p className="mt-1 text-xs text-slate-500">{label} in seeded corpus</p></div>)}</div>
+  return (
+    <div className="flex items-center gap-1 overflow-x-auto pb-2">
+      {steps.map((s, i) => (
+        <div key={s.label} className="flex items-center gap-1">
+          <div
+            className="flow-node active flex items-center gap-2 whitespace-nowrap animate-fade-in"
+            style={{ animationDelay: `${i * 100}ms`, borderColor: `${s.color}40`, color: s.color }}
+          >
+            <span style={{ color: s.color }}>{s.icon}</span>
+            <div>
+              <p className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</p>
+              <p className="text-[10px] text-slate-600 hidden sm:block">{s.sub}</p>
+            </div>
+          </div>
+          {i < steps.length - 1 && (
+            <div className="flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 20 20">
+                <line x1="2" y1="10" x2="18" y2="10" stroke="rgba(99,102,241,0.3)" strokeWidth="1.5"
+                  className="graph-line" strokeDasharray="4 2" />
+                <polygon points="14,7 18,10 14,13" fill="rgba(99,102,241,0.4)" />
+              </svg>
+            </div>
+          )}
         </div>
-        <div className="border-t border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950/45 lg:border-l lg:border-t-0">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Workflow size={17} className="text-teal"/> Working pipeline</div>
-          <div className="mt-5 space-y-3">{pipeline.map(([label, detail, icon], index) => <div key={label as string} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-blue-50 text-brand dark:bg-blue-500/10">{icon}</span><div className="min-w-0"><p className="text-sm font-medium">{label}</p><p className="truncate text-xs text-slate-500">{detail}</p></div><span className="ml-auto text-xs text-slate-400">{index + 1}</span></div>)}</div>
+      ))}
+    </div>
+  )
+}
+
+/* ─── Mindmap SVG ─── */
+function Mindmap() {
+  const center = { x: 160, y: 110 }
+  const nodes = [
+    { x: 40,  y: 35,  label: 'GitHub PRs',      color: '#6366f1', r: 22 },
+    { x: 270, y: 35,  label: 'Slack Threads',   color: '#8b5cf6', r: 22 },
+    { x: 40,  y: 185, label: 'Markdown ADRs',   color: '#14b8a6', r: 22 },
+    { x: 270, y: 185, label: 'Decision History', color: '#06b6d4', r: 24 },
+    { x: 160, y: 10,  label: 'Evidence',         color: '#f59e0b', r: 20 },
+    { x: 160, y: 205, label: 'Supermemory',      color: '#f43f5e', r: 26 },
+  ]
+  return (
+    <svg viewBox="0 0 320 230" className="w-full" style={{ maxHeight: 200 }}>
+      <defs>
+        <radialGradient id="cgr" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="rgba(99,102,241,0.4)" />
+          <stop offset="100%" stopColor="rgba(99,102,241,0.1)" />
+        </radialGradient>
+      </defs>
+      {/* Lines */}
+      {nodes.map((n, i) => (
+        <line key={i} x1={center.x} y1={center.y} x2={n.x} y2={n.y}
+          stroke={n.color} strokeOpacity="0.3" strokeWidth="1" strokeDasharray="4 3"
+          className="graph-line" style={{ animationDelay: `${i * 150}ms` }} />
+      ))}
+      {/* Center node */}
+      <circle cx={center.x} cy={center.y} r="32" fill="url(#cgr)" stroke="#6366f1" strokeWidth="1.5" />
+      <text x={center.x} y={center.y - 4} textAnchor="middle" fontSize="8" fill="#818cf8" fontWeight="700">Decision</text>
+      <text x={center.x} y={center.y + 8} textAnchor="middle" fontSize="8" fill="#818cf8" fontWeight="700">Lens 🧠</text>
+      {/* Outer nodes */}
+      {nodes.map((n, i) => (
+        <g key={i} className="graph-node" style={{ animationDelay: `${i * 100 + 300}ms` }}>
+          <circle cx={n.x} cy={n.y} r={n.r} fill="rgba(13,17,38,0.9)" stroke={n.color} strokeWidth="1.2" />
+          <text x={n.x} y={n.y + 3} textAnchor="middle" fontSize="6.5" fill={n.color} fontWeight="600">{n.label}</text>
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+/* ─── Memory type for session ─── */
+type SessionMemory = {
+  id: string; title: string; summary: string; entity: string
+  kind: 'decision' | 'tradeoff' | 'alternative' | 'architecture_change' | 'open_question' | 'document'
+  source: string; evidence: string; timestamp: string
+}
+const kindLabel = (k: SessionMemory['kind']) => k.replace(/_/g, ' ')
+const readFile = (f: File) => new Promise<string>((res, rej) => {
+  const r = new FileReader(); r.onload = () => res(String(r.result ?? '')); r.onerror = rej; r.readAsText(f)
+})
+const guessEntity = (t: string) =>
+  ['Supermemory','Supabase','Redis','Kafka','PostgreSQL','GitHub','Slack','Ollama','RLS','Stripe','Firebase']
+    .find(e => t.toLowerCase().includes(e.toLowerCase())) ?? 'Engineering'
+
+function extractLocalMemories(filename: string, text: string): SessionMemory[] {
+  const rows = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  const patterns: [SessionMemory['kind'], RegExp][] = [
+    ['decision',           /(?:^|\b)Decision\s*:\s*(.+)/i],
+    ['tradeoff',           /(?:^|\b)Tradeoff\s*:\s*(.+)/i],
+    ['alternative',        /(?:^|\b)Alternative\s*:\s*(.+)/i],
+    ['architecture_change',/(?:^|\b)Architecture Change\s*:\s*(.+)/i],
+    ['open_question',      /(?:^|\b)Open Question\s*:\s*(.+)/i],
+  ]
+  const extracted = rows.flatMap((line, idx) =>
+    patterns.flatMap(([kind, pat]) => {
+      const m = line.match(pat)
+      if (!m) return []
+      return [{ id: `${filename}-${kind}-${idx}`, title: m[1].trim(), summary: `${kindLabel(kind)} from ${filename}.`,
+        entity: guessEntity(line), kind, source: filename, evidence: line, timestamp: new Date().toISOString() }]
+    })
+  )
+  if (extracted.length) return extracted
+  const heading = rows.find(l => l.startsWith('#'))?.replace(/^#+\s*/, '') || filename
+  return [{ id: `${filename}-doc-${Date.now()}`, title: heading,
+    summary: `Markdown captured as local memory. Add "Decision:" lines for richer extraction.`,
+    entity: guessEntity(text), kind: 'document', source: filename,
+    evidence: rows.find(l => !l.startsWith('#')) || '', timestamp: new Date().toISOString() }]
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: DASHBOARD
+═══════════════════════════════════════════════════════════════════ */
+function Dashboard() {
+  const stats = [
+    { icon: <Target size={20}/>, value: '48', label: 'Decisions captured',     delta: '+12 this week', color: '#6366f1', sparkline: [12,18,14,22,19,27,31,25,35,38,42,48] },
+    { icon: <Activity size={20}/>, value: '31', label: 'Tradeoffs tracked',    delta: '+8 this week',  color: '#14b8a6', sparkline: [5,9,11,13,14,18,20,22,25,27,29,31] },
+    { icon: <Layers size={20}/>,   value: '16', label: 'Architecture changes', delta: '+3 this week',  color: '#8b5cf6', sparkline: [2,4,5,7,8,9,10,11,13,14,15,16] },
+    { icon: <Users size={20}/>,    value: '142', label: 'Artifacts ingested',  delta: '+24 this week', color: '#f59e0b', sparkline: [30,45,52,60,70,85,95,108,118,128,136,142] },
+  ]
+
+  const sources = [
+    { icon: <GitBranch size={16}/>, name: 'GitHub', count: '21 artifacts', pct: 82, color: '#6366f1', desc: 'PRs, commits, comments' },
+    { icon: <MessageSquare size={16}/>, name: 'Slack',  count: '14 threads',  pct: 64, color: '#8b5cf6', desc: 'Engineering discussions' },
+    { icon: <FileText size={16}/>, name: 'Markdown', count: '7 documents',  pct: 38, color: '#14b8a6', desc: 'ADRs & RFCs' },
+  ]
+
+  const recentActivity = [
+    { type: 'ADR Updated',           name: 'Auth & Tenant Authorization ADR-001', time: '2h ago',    icon: <FileText size={15}/>,      color: '#6366f1' },
+    { type: 'Pull Request Merged',   name: 'Persist Stripe envelopes → Kafka',    time: '5h ago',    icon: <GitPullRequest size={15}/>, color: '#14b8a6' },
+    { type: 'Slack Discussion',      name: 'Redis session revocation strategy',    time: 'Yesterday', icon: <MessageSquare size={15}/>, color: '#f59e0b' },
+    { type: 'Knowledge Extracted',   name: 'PostgreSQL RLS multi-tenant policy',  time: '2d ago',    icon: <Sparkles size={15}/>,      color: '#8b5cf6' },
+  ]
+
+  const techData = [
+    { label: 'Redis',       value: 24, color: 'chart-bar' },
+    { label: 'PostgreSQL',  value: 21, color: 'chart-bar-teal' },
+    { label: 'Kafka',       value: 17, color: 'chart-bar-violet' },
+    { label: 'Supabase',    value: 14, color: 'chart-bar-amber' },
+    { label: 'Firebase',    value: 6,  color: 'chart-bar-rose' },
+  ]
+
+  const donutData = [
+    { label: 'Decisions',   value: 48, color: '#6366f1' },
+    { label: 'Tradeoffs',   value: 31, color: '#14b8a6' },
+    { label: 'Arch changes',value: 16, color: '#8b5cf6' },
+    { label: 'Recurring',   value: 18, color: '#f59e0b' },
+    { label: 'Open Qs',     value: 6,  color: '#f43f5e' },
+  ]
+
+  return (
+    <>
+      {/* ── Hero Banner ── */}
+      <div className="panel-glow relative mb-6 overflow-hidden rounded-2xl p-6 sm:p-8 animate-fade-in">
+        {/* Decorative orbs */}
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #6366f1, transparent)', transform: 'translate(30%, -30%)' }} />
+        <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-40 rounded-full opacity-8"
+          style={{ background: 'radial-gradient(circle, #14b8a6, transparent)', transform: 'translateY(40%)' }} />
+
+        <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+          <div>
+            <div className="mb-4 flex flex-wrap gap-2">
+              <Pill tone="green">🟢 Supermemory Active</Pill>
+              <Pill tone="brand">🧠 AI-Powered Memory</Pill>
+              <Pill tone="teal">⚡ Hackathon Ready</Pill>
+            </div>
+            <p className="section-eyebrow">DecisionLens</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-50 sm:text-4xl lg:text-5xl leading-tight">
+              Turn engineering{' '}
+              <span className="gradient-text">conversations</span>{' '}
+              into <span className="gradient-text-warm">institutional memory.</span>
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-400">
+              DecisionLens watches GitHub PRs, Slack threads, and Markdown ADRs — extracts structured
+              knowledge objects — and stores them in <strong className="text-indigo-400">Supermemory</strong> for
+              instant evidence-backed retrieval. Never lose context again.
+            </p>
+
+            {/* Stat pills row */}
+            <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-3">
+              {[['48','Decisions'],['31','Tradeoffs'],['16','Arch Changes']].map(([v,l]) => (
+                <div key={l} className="stat-card text-center animate-count">
+                  <p className="text-2xl font-black text-slate-50">{v}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">{l}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pipeline flowchart */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
+              <Workflow size={16} className="text-teal-400" />
+              Live pipeline
+            </div>
+            <PipelineFlow />
+            <div className="mt-2">
+              <Mindmap />
+            </div>
+          </div>
         </div>
       </div>
-    </section>
-    <div className="grid gap-5 xl:grid-cols-[1fr_.82fr]">
-      <Card className="p-6">
-        <div className="flex items-center justify-between"><div><h2 className="font-semibold">Latest architecture change</h2><p className="mt-1 text-sm text-slate-500">A durable event path for billing operations.</p></div><ArrowUpRight size={18} className="text-slate-400"/></div>
-        <div className="mt-6 border-l-2 border-brand pl-5"><p className="font-medium">Outbox worker publishes committed Stripe envelopes to Kafka</p><p className="mt-2 text-sm leading-6 text-slate-500">The team chose replayability and idempotency over synchronous processing. Background jobs now own publication after the PostgreSQL transaction commits.</p><div className="mt-4 flex flex-wrap gap-2"><Pill tone="brand">Kafka</Pill><Pill>Architecture change</Pill><Pill tone="green">Evidence attached</Pill></div></div>
-      </Card>
-      <Card className="p-6">
-        <h2 className="font-semibold">Judge demo path</h2>
-        {['Ask why Redis was chosen for sessions.', 'Open the architecture timeline.', 'Show Firebase as a rejected alternative.', 'Upload an ADR into the ingestion queue.'].map((step, index) => <div key={step} className="mt-4 flex gap-3 border-t border-slate-100 pt-4 text-sm dark:border-slate-800"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-emerald-50 text-xs font-semibold text-teal dark:bg-emerald-500/10">{index + 1}</span><span>{step}</span></div>)}
-      </Card>
-    </div>
-    <div className="mt-5 grid gap-5 lg:grid-cols-3">
-      {sources.map(([name, detail, count]) => <Card className="p-5" key={name}><div className="flex items-center justify-between"><h2 className="font-semibold">{name}</h2><Pill>{count}</Pill></div><p className="mt-2 text-sm text-slate-500">{detail}</p><div className="mt-5 h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full w-4/5 rounded-full bg-teal"/></div></Card>)}
-    </div>
-    <div className="mt-5 grid gap-5 lg:grid-cols-2"><ActivityList/><RecentDecisions/></div>
-  </>
-}
-function ActivityList() { const activity = [{ type: 'ADR updated', name: 'Authentication and tenant authorization', time: '2h ago', icon: <FileText size={16}/> }, { type: 'Pull request merged', name: 'Persist Stripe envelopes before dispatch', time: '5h ago', icon: <GitPullRequest size={16}/> }, { type: 'Discussion captured', name: 'Redis session revocation', time: 'Yesterday', icon: <Bot size={16}/> }]; return <Card className="p-6"><h2 className="font-semibold">Recent activity</h2>{activity.map(({type,name,time,icon}) => <div className="mt-5 flex items-center gap-3" key={name}><span className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800">{icon}</span><div className="min-w-0"><p className="text-xs text-slate-400">{type}</p><p className="truncate text-sm font-medium">{name}</p></div><span className="ml-auto text-xs text-slate-400">{time}</span></div>)}</Card> }
-function RecentDecisions() { return <Card className="p-6"><h2 className="font-semibold">Recent decisions</h2>{['Use Redis session registry during the Supabase migration','Commit Kafka offsets after PostgreSQL projections succeed','Keep tenant context in PostgreSQL RLS transactions'].map((decision, i) => <div key={decision} className="mt-4 flex gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-indigo-50 text-[10px] text-brand dark:bg-indigo-500/10">{i + 1}</span><p className="text-sm leading-5">{decision}</p></div>)}</Card> }
 
+      {/* ── Stats Row ── */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((s, i) => (
+          <div
+            key={s.label}
+            className="stat-card animate-fade-in"
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            <div className="flex items-start justify-between">
+              <div
+                className="grid h-10 w-10 place-items-center rounded-xl"
+                style={{ background: `${s.color}22`, color: s.color }}
+              >
+                {s.icon}
+              </div>
+              <Sparkline values={s.sparkline} color={s.color} />
+            </div>
+            <p className="mt-3 text-2xl font-black text-slate-50">{s.value}</p>
+            <p className="text-xs text-slate-500">{s.label}</p>
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-400">
+              <TrendingUp size={11} />{s.delta}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Main content grid ── */}
+      <div className="grid gap-5 xl:grid-cols-[1.4fr_0.6fr]">
+        {/* Charts column */}
+        <div className="space-y-5">
+          {/* Bar chart */}
+          <Panel className="p-5 animate-fade-in delay-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-slate-400">📊 Discussion Volume</p>
+                <h2 className="mt-1 text-base font-bold text-slate-100">Technology Mentions</h2>
+              </div>
+              <Pill tone="brand">Last 90 days</Pill>
+            </div>
+            <BarChart data={techData} height={130} />
+          </Panel>
+
+          {/* Activity feed */}
+          <Panel className="p-5 animate-fade-in delay-300">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-100">⚡ Recent Activity</h2>
+              <Pill tone="teal">Live feed</Pill>
+            </div>
+            <div className="mt-4 space-y-0">
+              {recentActivity.map(({ type, name, time, icon, color }, i) => (
+                <div key={name} className="flex items-center gap-3 border-b border-white/5 py-3.5 last:border-0 animate-fade-in"
+                  style={{ animationDelay: `${300 + i * 60}ms` }}>
+                  <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl"
+                    style={{ background: `${color}18`, color }}>
+                    {icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-600">{type}</p>
+                    <p className="truncate text-sm font-medium text-slate-200">{name}</p>
+                  </div>
+                  <span className="flex-shrink-0 text-xs text-slate-600">{time}</span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-5">
+          {/* Donut chart */}
+          <Panel className="p-5 animate-fade-in delay-200">
+            <h2 className="mb-4 text-base font-bold text-slate-100">🧩 Knowledge Mix</h2>
+            <DonutChart segments={donutData} label="119" />
+          </Panel>
+
+          {/* Sources */}
+          <Panel className="p-5 animate-fade-in delay-300">
+            <h2 className="mb-4 text-base font-bold text-slate-100">🔌 Active Sources</h2>
+            <div className="space-y-4">
+              {sources.map(s => (
+                <div key={s.name}>
+                  <div className="mb-1.5 flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-slate-300" style={{ color: s.color }}>
+                      {s.icon} {s.name}
+                    </span>
+                    <span className="text-slate-500">{s.count}</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${s.pct}%`, background: s.color }} />
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-600">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          {/* Judge demo card */}
+          <Panel className="p-5 animate-fade-in delay-400">
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-100">
+              <Award size={16} className="text-amber-400" />
+              Judge Demo Path
+            </div>
+            {[
+              'Ask why Redis was chosen for sessions.',
+              'Open the Architecture Timeline.',
+              'Show Firebase as a rejected alternative.',
+              'Upload an ADR via Markdown Upload.',
+            ].map((step, i) => (
+              <div key={step} className="mt-3 flex gap-3 border-t border-white/5 pt-3 text-xs first:mt-2 first:border-0 first:pt-0">
+                <span className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-lg text-[10px] font-bold text-emerald-400"
+                  style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  {i + 1}
+                </span>
+                <span className="text-slate-400 leading-relaxed">{step}</span>
+              </div>
+            ))}
+          </Panel>
+        </div>
+      </div>
+
+      {/* ── Architecture Banner ── */}
+      <div className="mt-5 panel p-5 animate-fade-in delay-500">
+        <div className="flex items-center gap-2 mb-4">
+          <Cpu size={16} className="text-indigo-400" />
+          <h2 className="text-sm font-bold text-slate-100">System Architecture</h2>
+          <Pill tone="brand">Powered by Supermemory</Pill>
+        </div>
+        <div className="code-block text-[11px] leading-6">
+          <span className="cmt"># DecisionLens Full Pipeline</span>{'\n'}
+          GitHub · Slack · Markdown{'\n'}
+          {'  '}<span className="kw">→</span> Source Connectors <span className="cmt">  # Normalize into Artifacts</span>{'\n'}
+          {'  '}<span className="kw">→</span> Ingestion Engine  <span className="cmt">  # Queue + deduplicate</span>{'\n'}
+          {'  '}<span className="kw">→</span> <span className="str">EKPP (Ollama / Demo)</span>  <span className="cmt"># Extract knowledge objects</span>{'\n'}
+          {'  '}<span className="kw">→</span> <span className="num">Supermemory :6767</span>   <span className="cmt"># Long-term semantic memory</span>{'\n'}
+          {'  '}<span className="kw">→</span> Intelligence Layer <span className="cmt">  # Timeline · Trends · Q&A</span>{'\n'}
+          {'  '}<span className="kw">→</span> React Dashboard   <span className="cmt">  # You are here ✦</span>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: MEMORY GRAPH
+═══════════════════════════════════════════════════════════════════ */
 function MemoryGraph({ memories }: { memories: SessionMemory[] }) {
   const baseNodes = [
-    { id: 'Supermemory', x: 50, y: 16, size: 34, type: 'memory' },
-    { id: 'Supabase', x: 24, y: 36, size: 24, type: 'source' },
-    { id: 'Redis', x: 74, y: 36, size: 28, type: 'decision' },
-    { id: 'Kafka', x: 82, y: 66, size: 24, type: 'decision' },
-    { id: 'PostgreSQL RLS', x: 34, y: 70, size: 28, type: 'decision' },
-    { id: 'Firebase', x: 14, y: 62, size: 20, type: 'alternative' },
+    { id: 'Supermemory', x: 50,  y: 14,  r: 8,  type: 'memory',      color: '#6366f1', emoji: '🧠' },
+    { id: 'Supabase',    x: 22,  y: 35,  r: 6,  type: 'source',      color: '#14b8a6', emoji: '🗄️' },
+    { id: 'Redis',       x: 76,  y: 35,  r: 7,  type: 'decision',    color: '#f59e0b', emoji: '⚡' },
+    { id: 'Kafka',       x: 83,  y: 66,  r: 6,  type: 'decision',    color: '#8b5cf6', emoji: '📨' },
+    { id: 'PostgreSQL',  x: 32,  y: 68,  r: 7,  type: 'decision',    color: '#06b6d4', emoji: '🐘' },
+    { id: 'Firebase',    x: 14,  y: 58,  r: 5,  type: 'alternative', color: '#f43f5e', emoji: '🔥' },
+    { id: 'Stripe',      x: 64,  y: 18,  r: 5,  type: 'source',      color: '#10b981', emoji: '💳' },
+    { id: 'GitHub',      x: 20,  y: 16,  r: 5,  type: 'source',      color: '#818cf8', emoji: '🐙' },
   ]
-  const uploadedNodes = memories.slice(-6).map((memory, index) => ({ id: memory.entity, x: 18 + (index % 3) * 31, y: 86 + Math.floor(index / 3) * 9, size: 22, type: memory.kind, memory }))
+  const uploadedNodes = memories.slice(-4).map((m, i) => ({
+    id: m.entity, x: 10 + (i % 4) * 22, y: 86 + Math.floor(i / 4) * 10, r: 5, type: m.kind, color: '#14b8a6', emoji: '📄', memory: m,
+  }))
   const nodes = [...baseNodes, ...uploadedNodes]
-  const [selected, setSelected] = useState(nodes[2])
-  const selectedMemory = 'memory' in selected ? selected.memory as SessionMemory : undefined
-  const counts = useMemo(() => {
-    const all = [...memories, { kind: 'decision' }, { kind: 'decision' }, { kind: 'tradeoff' }, { kind: 'architecture_change' }, { kind: 'alternative' }] as { kind: SessionMemory['kind'] }[]
-    const kinds: SessionMemory['kind'][] = ['decision','tradeoff','alternative','architecture_change','open_question','document']
-    return kinds.map(kind => ({ kind, count: all.filter(item => item.kind === kind).length }))
-  }, [memories])
-  return <><Title eyebrow="Knowledge graph" title="Memory graph" description="An Obsidian-style map of engineering decisions, source artifacts, technologies, and extracted memories." action={<Pill tone={memories.length ? 'green' : 'brand'}>{memories.length ? `${memories.length} uploaded memories` : 'Demo graph'}</Pill>}/>
-    <div className="grid gap-5 xl:grid-cols-[1.4fr_.6fr]">
-      <Card className="overflow-hidden bg-white p-0 text-slate-900 dark:bg-white dark:text-slate-900">
-        <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800"><div className="flex items-center gap-2 text-sm font-semibold"><Network size={17} className="text-brand"/> Decision memory map</div><div className="flex gap-2"><Pill>click nodes</Pill><Pill tone="green">evidence first</Pill></div></div>
-        <svg viewBox="0 0 100 100" className="h-[560px] w-full bg-[radial-gradient(circle_at_center,rgba(37,99,235,.10),transparent_35%),linear-gradient(rgba(15,23,42,.04)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.04)_1px,transparent_1px)] text-slate-700 [background-size:100%_100%,8px_8px,8px_8px] dark:bg-[radial-gradient(circle_at_center,rgba(37,99,235,.10),transparent_35%),linear-gradient(rgba(15,23,42,.04)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.04)_1px,transparent_1px)] dark:text-slate-700">
-          {nodes.flatMap((node, index) => nodes.slice(index + 1).filter(other => Math.abs(other.x - node.x) + Math.abs(other.y - node.y) < 56).slice(0, 2).map(other => <line key={`${node.id}-${other.id}`} x1={node.x} y1={node.y} x2={other.x} y2={other.y} stroke="currentColor" strokeOpacity=".14" strokeWidth=".35" className="text-slate-500"/>))}
-          {nodes.map(node => <g key={`${node.id}-${node.x}`} onClick={() => setSelected(node)} className="cursor-pointer transition hover:opacity-90">
-            <circle cx={node.x} cy={node.y} r={node.size / 5 + (selected.id === node.id ? 1.8 : 0)} fill={node.type === 'alternative' ? '#f59e0b' : node.type === 'tradeoff' ? '#be123c' : node.type === 'memory' ? '#111827' : node.type === 'document' ? '#0f766e' : '#2563eb'} opacity={selected.id === node.id ? '.96' : '.82'} />
-            <circle cx={node.x} cy={node.y} r={node.size / 5 + 3.2} fill="none" stroke="currentColor" strokeOpacity={selected.id === node.id ? '.28' : '.10'} strokeWidth=".5" className="text-brand"/>
-            <text x={node.x} y={node.y + node.size / 5 + 4.5} textAnchor="middle" fontSize="3.1" fill="currentColor" className="text-slate-700 dark:text-slate-200">{node.id}</text>
-          </g>)}
-        </svg>
-      </Card>
-      <div className="space-y-5">
-        <Card className="bg-white p-6 text-slate-900 dark:bg-white dark:text-slate-900"><h2 className="font-semibold">{selectedMemory?.title ?? selected.id}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{selectedMemory?.summary ?? 'Core demo node connected to the seeded DecisionLens knowledge corpus.'}</p><div className="mt-4 flex flex-wrap gap-2"><Pill tone="brand">{selectedMemory ? kindLabel(selectedMemory.kind) : 'seeded node'}</Pill><Pill>{selectedMemory?.source ?? 'sample corpus'}</Pill></div><p className="mt-5 border-l-2 border-brand pl-3 text-sm leading-6 text-slate-600">{selectedMemory?.evidence ?? 'Evidence-backed memory appears here when you click uploaded or seeded nodes.'}</p></Card>
-        <Card className="bg-white p-6 text-slate-900 dark:bg-white dark:text-slate-900"><div className="flex items-center gap-2 font-semibold"><BarChart3 size={17} className="text-teal"/> Knowledge object mix</div><div className="mt-5 space-y-3">{counts.map(item => <div key={item.kind}><div className="mb-1 flex justify-between text-xs"><span className="capitalize text-slate-500">{kindLabel(item.kind)}</span><span>{item.count}</span></div><div className="h-2 rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal" style={{ width: `${Math.max(8, item.count * 18)}%` }}/></div></div>)}</div></Card>
+  const [sel, setSel] = useState(nodes[2])
+  const selMem = 'memory' in sel ? (sel as typeof uploadedNodes[0]).memory : undefined
+
+  const typeColor = (t: string) => ({ decision:'#f59e0b', alternative:'#f43f5e', tradeoff:'#06b6d4', memory:'#6366f1', source:'#10b981' }[t] || '#6366f1')
+
+  return (
+    <>
+      <SectionHeader eyebrow="Knowledge Graph" title="🕸️ Memory Graph"
+        desc="An Obsidian-style interactive map of engineering decisions, source artifacts, technologies, and extracted memories."
+        action={<Pill tone={memories.length ? 'teal' : 'brand'}>{memories.length ? `${memories.length} uploaded` : 'Demo graph'}</Pill>}
+      />
+      <div className="grid gap-5 xl:grid-cols-[1.5fr_0.5fr]">
+        <Panel className="overflow-hidden p-0 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-white/6 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
+              <Network size={16} className="text-indigo-400" />
+              Decision memory map
+            </div>
+            <div className="flex gap-2">
+              <Pill tone="slate">click nodes</Pill>
+              <Pill tone="teal">evidence first</Pill>
+            </div>
+          </div>
+          <svg
+            viewBox="0 0 100 100"
+            className="w-full cursor-default"
+            style={{
+              height: 500,
+              background: 'radial-gradient(ellipse at 50% 40%, rgba(99,102,241,0.08) 0%, transparent 60%)',
+            }}
+          >
+            {/* grid lines */}
+            {Array.from({ length: 10 }).map((_, i) => (
+              <line key={`h${i}`} x1="0" y1={i * 10} x2="100" y2={i * 10} stroke="rgba(99,102,241,0.04)" strokeWidth="0.3" />
+            ))}
+            {Array.from({ length: 10 }).map((_, i) => (
+              <line key={`v${i}`} x1={i * 10} y1="0" x2={i * 10} y2="100" stroke="rgba(99,102,241,0.04)" strokeWidth="0.3" />
+            ))}
+            {/* Edges */}
+            {nodes.flatMap((n, i) =>
+              nodes.slice(i + 1)
+                .filter(o => Math.hypot(o.x - n.x, o.y - n.y) < 45)
+                .slice(0, 2)
+                .map(o => (
+                  <line key={`${n.id}-${o.id}`}
+                    x1={n.x} y1={n.y} x2={o.x} y2={o.y}
+                    stroke={n.color} strokeOpacity="0.12" strokeWidth="0.4"
+                    className="graph-line" />
+                ))
+            )}
+            {/* Nodes */}
+            {nodes.map((n, i) => {
+              const isSelected = sel.id === n.id
+              return (
+                <g key={`${n.id}-${i}`}
+                  onClick={() => setSel(n)}
+                  className="graph-node cursor-pointer"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  {isSelected && (
+                    <circle cx={n.x} cy={n.y} r={n.r + 4} fill={n.color} opacity="0.12" className="animate-ping" />
+                  )}
+                  <circle cx={n.x} cy={n.y} r={n.r + 2} fill={n.color} opacity={isSelected ? 0.2 : 0.06} />
+                  <circle cx={n.x} cy={n.y} r={n.r} fill="rgba(13,17,38,0.92)" stroke={n.color}
+                    strokeWidth={isSelected ? 1.2 : 0.7} opacity={isSelected ? 1 : 0.85} />
+                  <text x={n.x} y={n.y + 2} textAnchor="middle" fontSize="3.2"
+                    fill={isSelected ? n.color : '#94a3b8'} fontWeight={isSelected ? '700' : '500'}>
+                    {n.id}
+                  </text>
+                </g>
+              )
+            })}
+          </svg>
+        </Panel>
+
+        <div className="space-y-4">
+          {/* Selected node detail */}
+          <Panel className="p-5 animate-fade-in">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-2.5 w-2.5 rounded-full" style={{ background: sel.color, boxShadow: `0 0 8px ${sel.color}` }} />
+              <h2 className="font-bold text-slate-100">{sel.id}</h2>
+            </div>
+            <p className="text-sm leading-6 text-slate-400">
+              {selMem?.summary ?? 'Core node in the DecisionLens knowledge corpus. Click any node to inspect its evidence and connections.'}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Pill tone="brand">{kindLabel((selMem?.kind ?? sel.type) as any)}</Pill>
+              <Pill tone="slate">{selMem?.source ?? 'seeded corpus'}</Pill>
+            </div>
+            {selMem && (
+              <blockquote className="evidence-quote mt-4">
+                {selMem.evidence}
+              </blockquote>
+            )}
+          </Panel>
+
+          {/* Knowledge object mix */}
+          <Panel className="p-5 animate-fade-in delay-100">
+            <div className="flex items-center gap-2 mb-4 text-sm font-bold text-slate-100">
+              <BarChart3 size={15} className="text-teal-400" />
+              Knowledge object mix
+            </div>
+            {[
+              { kind: 'Decision',      count: 3, color: '#6366f1' },
+              { kind: 'Tradeoff',      count: 2, color: '#14b8a6' },
+              { kind: 'Alternative',   count: 1, color: '#f59e0b' },
+              { kind: 'Arch Change',   count: 1, color: '#8b5cf6' },
+              { kind: 'Open Question', count: 1, color: '#f43f5e' },
+              ...memories.reduce<{ kind: string; count: number; color: string }[]>((acc, m) => {
+                const x = acc.find(a => a.kind === kindLabel(m.kind))
+                if (x) x.count++; else acc.push({ kind: kindLabel(m.kind), count: 1, color: '#10b981' })
+                return acc
+              }, []),
+            ].map(item => (
+              <div key={item.kind} className="mb-3">
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="capitalize text-slate-500">{item.kind}</span>
+                  <span className="font-semibold text-slate-300">{item.count}</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${Math.max(10, item.count * 25)}%`, background: item.color }} />
+                </div>
+              </div>
+            ))}
+          </Panel>
+
+          {/* Legend */}
+          <Panel className="p-4 animate-fade-in delay-200">
+            <p className="mb-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Legend</p>
+            {[
+              { label: 'Decision',    color: '#f59e0b' },
+              { label: 'Alternative', color: '#f43f5e' },
+              { label: 'Memory hub',  color: '#6366f1' },
+              { label: 'Source',      color: '#10b981' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-2 py-1 text-xs text-slate-500">
+                <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                {item.label}
+              </div>
+            ))}
+          </Panel>
+        </div>
       </div>
-    </div>
-  </>
+    </>
+  )
 }
 
-function Timeline() { const [items,setItems]=useState<ArchitectureTimeline[]>(demoTimeline); const [loading,setLoading]=useState(false); useEffect(()=>{setLoading(true);api.timeline().then(setItems).catch(()=>{}).finally(()=>setLoading(false))},[]); const events=items[0]?.events ?? []; return <><Title eyebrow="Architecture intelligence" title="Architecture timeline" description="A source-grounded evolution of the platform's key technical boundaries."/>{loading?<Loading/>:<Card className="overflow-hidden p-6 sm:p-8"><div className="relative ml-2 border-l border-indigo-200 dark:border-indigo-900">{events.map((event,index)=><div key={event.timestamp} className="relative ml-6 pb-10 last:pb-0"><span className="absolute -left-[31px] top-1 grid h-4 w-4 place-items-center rounded-full border-4 border-white bg-brand dark:border-slate-900"/><p className="text-xs font-medium text-brand">{formatDate(event.timestamp)}</p><h2 className="mt-2 text-base font-semibold">{event.decision}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{event.reason}</p><div className="mt-3 flex gap-2"><Pill>{Math.round(event.confidence*100)}% confidence</Pill><Pill tone="brand">Evidence attached</Pill></div>{index < events.length-1 && <div className="absolute -bottom-3 left-0 text-slate-300">↓</div>}</div>)}</div></Card>}</> }
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: TIMELINE
+═══════════════════════════════════════════════════════════════════ */
+function Timeline() {
+  const [items, setItems] = useState<ArchitectureTimeline[]>(demoTimeline)
+  const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    setLoading(true)
+    api.timeline().then(setItems).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+  const events = items[0]?.events ?? []
+  const colors = ['#6366f1', '#14b8a6', '#8b5cf6', '#f59e0b', '#f43f5e', '#06b6d4']
 
-function Recurring() { const [items,setItems]=useState<RecurringDiscussion[]>(demoRecurring); useEffect(()=>{api.recurring().then(setItems).catch(()=>{})},[]); return <><Title eyebrow="Patterns" title="Recurring discussions" description="Topics that keep resurfacing across conversations, pull requests, and decision records."/><div className="grid gap-4">{items.map(item=><Card className="p-5" key={item.topic}><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">{item.topic}</h2><p className="mt-1 max-w-2xl text-sm text-slate-500">{item.summary}</p></div><Pill tone="brand">{item.discussion_count} occurrences</Pill></div><div className="mt-4 flex flex-wrap gap-2"><Pill tone="green">{item.status ?? 'Active'}</Pill><Pill>Last discussed {formatDate(item.last_discussed)}</Pill><Pill>Evidence available</Pill></div></Card>)}</div></> }
+  return (
+    <>
+      <SectionHeader eyebrow="Architecture Intelligence" title="🕰️ Architecture Timeline"
+        desc="A source-grounded, chronological evolution of the platform's key technical boundaries and decisions." />
+      {loading ? <Spinner /> : (
+        <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
+          <Panel className="p-6 animate-fade-in">
+            <div className="relative ml-3 border-l border-indigo-500/20 pl-6">
+              {events.map((ev, i) => (
+                <div key={ev.timestamp} className="relative pb-10 last:pb-0 animate-slide-in"
+                  style={{ animationDelay: `${i * 100}ms` }}>
+                  <div className="timeline-dot absolute -left-[29px] top-1" style={{ background: colors[i % colors.length], borderColor: `${colors[i % colors.length]}40`, boxShadow: `0 0 12px ${colors[i % colors.length]}50` }} />
+                  <span className="text-xs font-semibold" style={{ color: colors[i % colors.length] }}>
+                    {fmt(ev.timestamp)}
+                  </span>
+                  <h2 className="mt-2 text-base font-bold text-slate-100">{ev.decision}</h2>
+                  <p className="mt-1.5 max-w-lg text-sm leading-6 text-slate-500">{ev.reason}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Pill tone="brand">{Math.round(ev.confidence * 100)}% confidence</Pill>
+                    <Pill tone="teal">Evidence attached</Pill>
+                    {ev.evidence?.[0] && (
+                      <Pill tone="violet">Source: {ev.evidence[0].artifact_reference?.split(':')[0] ?? 'artifact'}</Pill>
+                    )}
+                  </div>
+                  {ev.evidence?.[0] && (
+                    <blockquote className="evidence-quote mt-3 text-[11px]">
+                      {ev.evidence[0].content}
+                    </blockquote>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Panel>
 
-function Trends() { const [items,setItems]=useState<TechnologyTrend[]>(demoTrends); useEffect(()=>{api.trends().then(setItems).catch(()=>{})},[]); const max=Math.max(...items.map(i=>i.discussion_count)); return <><Title eyebrow="Signals" title="Technology trends" description="Adoption, rejection, and conversation volume across the engineering stack."/><div className="grid gap-5 lg:grid-cols-2"><Card className="p-6"><h2 className="font-semibold">Most discussed</h2><div className="mt-6 space-y-5">{items.map(item=><div key={item.technology}><div className="mb-2 flex justify-between text-sm"><span>{item.technology}</span><span className="text-slate-400">{item.discussion_count} mentions</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-brand" style={{width:`${item.discussion_count/max*100}%`}}/></div></div>)}</div></Card><Card className="p-6"><h2 className="font-semibold">Adoption signals</h2><div className="mt-5 divide-y divide-slate-100 dark:divide-slate-800">{items.map(item=><div className="flex items-center justify-between py-4" key={item.technology}><div><p className="font-medium text-sm">{item.technology}</p><p className="mt-1 text-xs text-slate-500">{item.accepted_count} adopted · {item.rejected_count} rejected</p></div><Pill tone={item.is_deprecated?'slate':item.is_new?'brand':'green'}>{item.is_deprecated?'Deprecated':item.is_new?'Recently introduced':'Adopted'}</Pill></div>)}</div></Card></div></> }
+          {/* Side panel: timeline overview chart */}
+          <div className="space-y-4">
+            <Panel className="p-5 animate-fade-in delay-100">
+              <h2 className="mb-4 text-sm font-bold text-slate-100">📊 Confidence Distribution</h2>
+              <BarChart
+                data={events.map((ev, i) => ({
+                  label: `Event ${i + 1}`,
+                  value: Math.round(ev.confidence * 100),
+                  color: `chart-bar${i % 2 === 0 ? '' : '-teal'}`,
+                }))}
+                height={110}
+              />
+            </Panel>
+            <Panel className="p-5 animate-fade-in delay-200">
+              <h2 className="mb-4 text-sm font-bold text-slate-100">🏗️ Architecture Summary</h2>
+              <div className="space-y-3">
+                {[
+                  { label: 'Auth Layer',    tech: 'Supabase + RLS', status: 'Active',    color: '#10b981' },
+                  { label: 'Cache Layer',   tech: 'Redis (5-min)',  status: 'Active',    color: '#10b981' },
+                  { label: 'Events Layer',  tech: 'Kafka + Stripe', status: 'Active',    color: '#10b981' },
+                  { label: 'Reports Layer', tech: 'Background jobs',status: 'Stable',    color: '#f59e0b' },
+                ].map(r => (
+                  <div key={r.label} className="flex items-center justify-between rounded-lg border border-white/6 p-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-300">{r.label}</p>
+                      <p className="text-[11px] text-slate-600">{r.tech}</p>
+                    </div>
+                    <span className="text-[10px] font-semibold" style={{ color: r.color }}>{r.status}</span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
 
-function History() { const [query,setQuery]=useState('Supabase'); const [items,setItems]=useState<DecisionHistory[]>(demoHistory()); const search=()=>api.history(query).then(data=>setItems(data.length?data:demoHistory(query))).catch(()=>setItems(demoHistory(query))); return <><Title eyebrow="Decision intelligence" title="Decision history" description="Trace a technology from its first proposal through the tradeoffs that shaped it." action={<form onSubmit={e=>{e.preventDefault();search()}} className="flex gap-2"><input value={query} onChange={e=>setQuery(e.target.value)} className="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-slate-900"/><button className="rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white dark:bg-brand">Search</button></form>}/>{items.map(item=><div key={item.title} className="grid gap-5 lg:grid-cols-3"><Card className="p-6 lg:col-span-2"><h2 className="font-semibold">{item.title}</h2><p className="mt-2 text-sm text-slate-500">{item.summary}</p><div className="mt-6 space-y-5">{item.history.map(event=><div key={event.timestamp} className="border-l-2 border-indigo-200 pl-4 dark:border-indigo-900"><p className="text-xs text-brand">{formatDate(event.timestamp)}</p><p className="mt-1 text-sm font-medium">{event.decision}</p><p className="mt-1 text-sm text-slate-500">{event.reason}</p></div>)}</div></Card><Card className="p-6"><h2 className="font-semibold">Tradeoffs & alternatives</h2><p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Tradeoffs</p>{['RLS increases local debugging effort.','Redis adds operational ownership.'].map(x=><p key={x} className="mt-2 text-sm leading-5">{x}</p>)}<p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-400">Alternatives</p>{['Standalone policy service','Fully stateless JWT sessions'].map(x=><Pill key={x}>{x}</Pill>)}</Card></div>)}</> }
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: RECURRING DISCUSSIONS
+═══════════════════════════════════════════════════════════════════ */
+function Recurring() {
+  const [items, setItems] = useState<RecurringDiscussion[]>(demoRecurring)
+  useEffect(() => { api.recurring().then(setItems).catch(() => {}) }, [])
 
-function Ask({ memories }: { memories: SessionMemory[] }) { const [input,setInput]=useState('Why did we choose Redis for session management?'); const [answer,setAnswer]=useState<HistoricalContext[]>(demoContext('Redis')); const [loading,setLoading]=useState(false); const ask=async()=>{if(!input.trim())return;setLoading(true);const local=memories.filter(memory => `${memory.title} ${memory.entity} ${memory.evidence}`.toLowerCase().includes(input.toLowerCase().split(/\s+/).find(word => word.length > 3) ?? input.toLowerCase())); if(local.length){setAnswer([{...demoContext(input)[0], title:`Local context: ${input}`, summary:`I found ${local.length} uploaded Markdown memory item${local.length===1?'':'s'} related to your question.`, previous_decisions: local.map(item=>item.title), tradeoffs: local.map(item=>item.evidence), alternatives: local.filter(item=>item.kind==='alternative').map(item=>item.title), architecture_changes: local.filter(item=>item.kind==='architecture_change').map(item=>item.title), related_entities: [...new Set(local.map(item=>item.entity))], related_artifacts: [...new Set(local.map(item=>item.source))]}]);setLoading(false);return}try{const result=await api.query(input);const context=(result.historical_context as HistoricalContext[])||[];setAnswer(context.length?context:demoContext(input))}catch{setAnswer(demoContext(input))}finally{setLoading(false)}}; return <><Title eyebrow="Ask anything" title="Ask DecisionLens" description="Answers are grounded in captured engineering discussions and their source evidence." action={memories.length ? <Pill tone="green">{memories.length} local memories active</Pill> : undefined}/><div className="grid gap-5 lg:grid-cols-3"><Card className="min-h-[520px] p-6 lg:col-span-2"><div className="flex items-center gap-2 text-sm font-medium"><span className="grid h-7 w-7 place-items-center rounded-lg bg-indigo-50 text-brand dark:bg-indigo-500/10"><Sparkles size={15}/></span> DecisionLens</div><div className="mt-8"><p className="max-w-2xl text-lg leading-8">{loading?'Searching your engineering memory…':answer[0]?.summary}</p>{!loading&&<div className="mt-6 space-y-3">{answer[0]?.previous_decisions.map(item=><div className="rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800" key={item}>{item}</div>)}</div>}</div><form onSubmit={e=>{e.preventDefault();ask()}} className="mt-10 flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask about Redis, Supabase, or an uploaded ADR…" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-brand dark:border-slate-700 dark:bg-slate-900"/><button className="grid h-11 w-11 place-items-center rounded-xl bg-brand text-white"><Send size={17}/></button></form></Card><EvidencePanel context={answer[0]}/></div></> }
-function EvidencePanel({context}:{context?:HistoricalContext}) { return <Card className="p-6"><h2 className="font-semibold">Evidence</h2><p className="mt-1 text-sm text-slate-500">Trace every answer back to source material.</p><div className="mt-5 space-y-4">{(context?.tradeoffs??['No evidence yet']).map(item=><div key={item} className="border-l-2 border-brand pl-3"><p className="text-sm leading-5">{item}</p><p className="mt-1 text-xs text-slate-400">Slack · #platform</p></div>)}</div><div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Confidence</p><p className="mt-1 text-xl font-semibold">92%</p><p className="mt-3 text-xs text-slate-500">Related: Supabase · Redis · PostgreSQL RLS</p></div></Card> }
+  const topicColors: Record<string, string> = { Redis: '#f59e0b', Kafka: '#8b5cf6', 'PostgreSQL RLS': '#06b6d4' }
+  const heatData = items.map(i => ({ label: i.topic, value: i.discussion_count, color: 'chart-bar' }))
 
-function Upload({toast,onMemory}:{toast:(text:string)=>void; onMemory:(items:SessionMemory[])=>void}) { const [file,setFile]=useState<File|null>(null); const [preview,setPreview]=useState<SessionMemory[]>([]); const [busy,setBusy]=useState(false); const ref=useRef<HTMLInputElement>(null); const choose=async(next?:File|null)=>{setFile(next??null);setPreview(next?extractLocalMemories(next.name, await readFile(next)):[])}; const submit=async()=>{if(!file)return;setBusy(true);const local=preview.length?preview:extractLocalMemories(file.name, await readFile(file));onMemory(local);try{await api.uploadMarkdown(file);toast(`Markdown queued and ${local.length} local memories added.`)}catch{toast(`API unavailable — ${local.length} local demo memories added.`)}finally{setBusy(false)}}; return <><Title eyebrow="Ingestion" title="Markdown upload" description="Add ADRs, RFCs, and architecture notes. In demo mode, DecisionLens also extracts local session memories immediately so you can test without an LLM."/><div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]"><Card className="p-8"><button onClick={()=>ref.current?.click()} className="flex min-h-64 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/40 p-8 text-center transition hover:bg-indigo-50 dark:border-indigo-900 dark:bg-indigo-500/5"><UploadCloud className="text-brand" size={32}/><p className="mt-4 font-medium">Drop a Markdown file here</p><p className="mt-2 text-sm text-slate-500">or click to browse · .md and .mdx files only</p><input ref={ref} onChange={e=>choose(e.target.files?.[0])} type="file" accept=".md,.mdx,text/markdown" className="hidden"/></button>{file&&<div className="mt-5 flex items-center justify-between rounded-xl bg-slate-50 p-4 dark:bg-slate-800"><div className="flex items-center gap-3"><FileText size={18} className="text-brand"/><div><p className="text-sm font-medium">{file.name}</p><p className="text-xs text-slate-500">{Math.ceil(file.size/1024)} KB · {preview.length} extractable memories</p></div></div><button onClick={()=>choose(null)}><X size={16}/></button></div>}<button disabled={!file||busy} onClick={submit} className="mt-5 w-full rounded-xl bg-brand py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40">{busy?'Sending to ingestion queue…':'Upload and add to memory graph'}</button></Card><Card className="p-6"><h2 className="font-semibold">Local extraction preview</h2><p className="mt-2 text-sm text-slate-500">This deterministic demo brain works without Ollama. For richer extraction, run Ollama and set <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">EXTRACTION_PROVIDER=ollama</code>.</p><div className="mt-5 space-y-3">{(preview.length?preview:[{id:'empty',title:'No file selected yet',summary:'Upload Markdown with lines like "Decision: Use Redis for session revocation" to see instant memories.',kind:'document',entity:'Demo',source:'',evidence:'',timestamp:''} as SessionMemory]).map(item=><div key={item.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800"><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium">{item.title}</p><Pill>{kindLabel(item.kind)}</Pill></div><p className="mt-1 text-xs text-slate-500">{item.evidence || item.summary}</p></div>)}</div></Card></div></> }
-function Settings(){return <><Title eyebrow="Workspace" title="Settings" description="Configure the dashboard’s connection to the existing DecisionLens API."/><Card className="max-w-2xl p-6"><h2 className="font-semibold">API connection</h2><p className="mt-2 text-sm text-slate-500">Set <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">VITE_API_BASE_URL</code> to connect this dashboard to a deployed FastAPI service.</p><div className="mt-5 rounded-lg border border-slate-200 p-4 font-mono text-sm dark:border-slate-700">{import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'}</div><div className="mt-5 flex items-center gap-2 text-sm text-emerald-600"><CheckCircle2 size={16}/> Demo fallback data is enabled when API calls are unavailable.</div></Card></>}
+  return (
+    <>
+      <SectionHeader eyebrow="Patterns" title="🔁 Recurring Discussions"
+        desc="Topics that surface repeatedly across pull requests, Slack threads, and architecture documents." />
+      <div className="grid gap-5 lg:grid-cols-[1fr_0.45fr]">
+        <div className="space-y-4">
+          {items.map((item, i) => {
+            const c = topicColors[item.topic] || '#6366f1'
+            return (
+              <Panel key={item.topic} className="p-5 animate-slide-in" style={{ animationDelay: `${i * 100}ms` }}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${c}18`, color: c }}>
+                      <Flame size={18} />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-slate-100">{item.topic}</h2>
+                      <p className="mt-0.5 max-w-lg text-sm text-slate-500">{item.summary}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black" style={{ color: c }}>{item.discussion_count}</p>
+                    <p className="text-[11px] text-slate-600">occurrences</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Pill tone="green">{item.status ?? 'Active'}</Pill>
+                  <Pill tone="slate">Last: {fmt(item.last_discussed)}</Pill>
+                  <Pill tone="brand">Evidence available</Pill>
+                </div>
+                {/* mini progress */}
+                <div className="mt-4">
+                  <div className="mb-1 flex justify-between text-[11px] text-slate-600">
+                    <span>Discussion intensity</span>
+                    <span>{Math.round((item.discussion_count / 20) * 100)}%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${(item.discussion_count / 20) * 100}%`, background: c }} />
+                  </div>
+                </div>
+              </Panel>
+            )
+          })}
+        </div>
 
-export function App(){const [page,setPage]=useState<Page>('dashboard');const [dark,setDark]=useState(false);const [toast,setToast]=useState('');const [apiStatus,setApiStatus]=useState<'checking'|'live'|'demo'>('checking');const [memories,setMemories]=useState<SessionMemory[]>([]);const addMemories=(items:SessionMemory[])=>setMemories(current=>[...current,...items]);useEffect(()=>{api.health().then(()=>setApiStatus('live')).catch(()=>setApiStatus('demo'))},[]);useEffect(()=>{if(!toast)return;const id=setTimeout(()=>setToast(''),3500);return()=>clearTimeout(id)},[toast]);const content=useMemo(()=>({dashboard:<Dashboard/>,graph:<MemoryGraph memories={memories}/>,ask:<Ask memories={memories}/>,timeline:<Timeline/>,recurring:<Recurring/>,trends:<Trends/>,history:<History/>,upload:<Upload toast={setToast} onMemory={addMemories}/>,settings:<Settings/>})[page],[page,memories]);return <PageShell page={page} onPage={setPage} dark={dark} setDark={setDark} apiStatus={apiStatus}>{content}{toast&&<div className="fixed bottom-5 right-5 z-50 rounded-lg bg-ink px-4 py-3 text-sm text-white shadow-xl dark:bg-white dark:text-ink">{toast}</div>}</PageShell>}
+        <div className="space-y-4">
+          <Panel className="p-5 animate-fade-in">
+            <h2 className="mb-1 text-sm font-bold text-slate-100">📊 Discussion Frequency</h2>
+            <p className="mb-2 text-[11px] text-slate-600">Mentions across all sources</p>
+            <BarChart data={heatData} height={120} />
+          </Panel>
+          <Panel className="p-5 animate-fade-in delay-100">
+            <h2 className="mb-4 text-sm font-bold text-slate-100">💡 Why Topics Recur</h2>
+            {[
+              { icon: '⚖️', label: 'Unresolved tradeoffs', desc: 'Core tradeoffs without clear winners' },
+              { icon: '📐', label: 'Architectural drift',  desc: 'Systems diverging from original design' },
+              { icon: '🧩', label: 'Complexity creep',     desc: 'Increasing system complexity over time' },
+            ].map(item => (
+              <div key={item.label} className="mt-3 flex items-start gap-3 border-t border-white/5 pt-3 first:mt-0 first:border-0 first:pt-0">
+                <span className="text-lg">{item.icon}</span>
+                <div>
+                  <p className="text-xs font-semibold text-slate-300">{item.label}</p>
+                  <p className="text-[11px] text-slate-600">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </Panel>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: TECHNOLOGY TRENDS
+═══════════════════════════════════════════════════════════════════ */
+function Trends() {
+  const [items, setItems] = useState<TechnologyTrend[]>(demoTrends)
+  useEffect(() => { api.trends().then(setItems).catch(() => {}) }, [])
+  const max = Math.max(...items.map(i => i.discussion_count), 1)
+  const trendColors: Record<string, string> = { Redis: '#f59e0b', PostgreSQL: '#06b6d4', Kafka: '#8b5cf6', Firebase: '#f43f5e', Supabase: '#10b981' }
+
+  return (
+    <>
+      <SectionHeader eyebrow="Signals" title="📈 Technology Trends"
+        desc="Adoption, rejection, and discussion volume signals across the engineering stack." />
+      <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        {/* Bar chart card */}
+        <Panel className="p-5 animate-fade-in">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-base font-bold text-slate-100">Discussion Volume</h2>
+            <Pill tone="brand">Last 90 days</Pill>
+          </div>
+          <p className="text-xs text-slate-600 mb-4">Mentions across GitHub · Slack · Markdown</p>
+          <div className="space-y-4">
+            {items.map(item => {
+              const c = trendColors[item.technology] || '#6366f1'
+              return (
+                <div key={item.technology}>
+                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ background: c }} />
+                      <span className="font-medium text-slate-200">{item.technology}</span>
+                    </div>
+                    <span className="text-xs text-slate-500">{item.discussion_count} mentions</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${(item.discussion_count / max) * 100}%`, background: c }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-6 border-t border-white/6 pt-5">
+            <h3 className="mb-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Acceptance Rate</h3>
+            <BarChart
+              data={items.map(item => ({
+                label: item.technology,
+                value: item.accepted_count,
+                color: item.is_deprecated ? 'chart-bar-rose' : item.is_new ? 'chart-bar' : 'chart-bar-teal',
+              }))}
+              height={90}
+            />
+          </div>
+        </Panel>
+
+        {/* Adoption signals cards */}
+        <div className="space-y-3">
+          <Panel className="p-4 animate-fade-in delay-100">
+            <h2 className="mb-4 text-sm font-bold text-slate-100">⚡ Adoption Signals</h2>
+            {items.map(item => {
+              const c = trendColors[item.technology] || '#6366f1'
+              const badge = item.is_deprecated
+                ? { label: '⛔ Deprecated', tone: 'rose' as const }
+                : item.is_new
+                  ? { label: '🆕 Recently introduced', tone: 'brand' as const }
+                  : { label: '✅ Adopted', tone: 'green' as const }
+              return (
+                <div key={item.technology} className="flex items-center justify-between border-t border-white/5 py-3.5 first:border-0 first:pt-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 grid place-items-center rounded-lg" style={{ background: `${c}15`, color: c }}>
+                      <Server size={14} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-200">{item.technology}</p>
+                      <p className="text-[11px] text-slate-600">
+                        {item.accepted_count} adopted · {item.rejected_count} rejected
+                      </p>
+                    </div>
+                  </div>
+                  <Pill tone={badge.tone}>{badge.label}</Pill>
+                </div>
+              )
+            })}
+          </Panel>
+
+          {/* Pie chart */}
+          <Panel className="p-5 animate-fade-in delay-200">
+            <h2 className="mb-4 text-sm font-bold text-slate-100">🥧 Adoption vs Rejection</h2>
+            <DonutChart
+              size={100}
+              label="Total"
+              segments={[
+                { label: 'Adopted',  value: items.reduce((s,i)=>s+i.accepted_count,0), color: '#10b981' },
+                { label: 'Rejected', value: items.reduce((s,i)=>s+i.rejected_count,0), color: '#f43f5e' },
+                { label: 'Pending',  value: 5, color: '#6366f1' },
+              ]}
+            />
+          </Panel>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: DECISION HISTORY
+═══════════════════════════════════════════════════════════════════ */
+function History() {
+  const [query, setQuery] = useState('Supabase')
+  const [items, setItems] = useState<DecisionHistory[]>(demoHistory())
+  const search = () => api.history(query).then(d => setItems(d.length ? d : demoHistory(query))).catch(() => setItems(demoHistory(query)))
+
+  return (
+    <>
+      <SectionHeader eyebrow="Decision Intelligence" title="📜 Decision History"
+        desc="Trace a technology from its first proposal through every tradeoff and architecture change."
+        action={
+          <form onSubmit={e => { e.preventDefault(); search() }} className="flex gap-2">
+            <input value={query} onChange={e => setQuery(e.target.value)} className="dl-input w-40" placeholder="Redis, Kafka…" />
+            <button type="submit" className="btn-brand">Search</button>
+          </form>
+        }
+      />
+      {items.map(item => (
+        <div key={item.title} className="grid gap-5 lg:grid-cols-3 animate-fade-in">
+          <Panel className="p-6 lg:col-span-2">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500/10 text-indigo-400">
+                <HistoryIcon size={20} />
+              </div>
+              <div>
+                <h2 className="font-bold text-slate-100">{item.title}</h2>
+                <p className="text-sm text-slate-500">{item.summary}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {item.participants.map(p => (
+                <span key={p} className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/4 px-3 py-1 text-xs text-slate-400">
+                  <Users size={11} className="text-indigo-400" /> {p}
+                </span>
+              ))}
+            </div>
+            <div className="space-y-5">
+              {item.history.map((ev, i) => (
+                <div key={ev.timestamp} className="flex gap-4 animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="timeline-dot" />
+                    {i < item.history.length - 1 && <div className="w-px flex-1 bg-indigo-500/10" />}
+                  </div>
+                  <div className="pb-5">
+                    <span className="text-xs font-semibold text-indigo-400">{fmt(ev.timestamp)}</span>
+                    <h3 className="mt-1 text-sm font-semibold text-slate-200">{ev.decision}</h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{ev.reason}</p>
+                    <div className="mt-2 flex gap-2">
+                      <Pill tone="brand">{Math.round(ev.confidence * 100)}%</Pill>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          <div className="space-y-4">
+            <Panel className="p-5 animate-fade-in delay-100">
+              <h2 className="mb-4 text-sm font-bold text-slate-100">⚖️ Tradeoffs</h2>
+              {['RLS increases local debugging effort.', 'Redis adds operational ownership.'].map((t, i) => (
+                <div key={i} className="mt-3 border-t border-white/5 pt-3 first:mt-0 first:border-0 first:pt-0">
+                  <div className="flex items-start gap-2 text-xs text-slate-400">
+                    <AlertCircle size={13} className="mt-0.5 flex-shrink-0 text-amber-400" />
+                    {t}
+                  </div>
+                </div>
+              ))}
+            </Panel>
+            <Panel className="p-5 animate-fade-in delay-200">
+              <h2 className="mb-4 text-sm font-bold text-slate-100">🔀 Alternatives</h2>
+              {['Standalone policy service', 'Fully stateless JWT sessions'].map(alt => (
+                <div key={alt} className="mt-2">
+                  <Pill tone="rose">⛔ {alt}</Pill>
+                </div>
+              ))}
+            </Panel>
+            <Panel className="p-5 animate-fade-in delay-300">
+              <h2 className="mb-3 text-sm font-bold text-slate-100">📊 Confidence Timeline</h2>
+              <BarChart
+                data={item.history.map((ev, i) => ({
+                  label: `E${i + 1}`,
+                  value: Math.round(ev.confidence * 100),
+                  color: 'chart-bar',
+                }))}
+                height={80}
+              />
+            </Panel>
+          </div>
+        </div>
+      ))}
+    </>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: ASK DECISIONLENS
+═══════════════════════════════════════════════════════════════════ */
+function Ask({ memories }: { memories: SessionMemory[] }) {
+  const [input, setInput] = useState('Why did we choose Redis for session management?')
+  const [answer, setAnswer] = useState<HistoricalContext[]>(demoContext('Redis'))
+  const [loading, setLoading] = useState(false)
+
+  const suggested = [
+    'Why did we choose Redis?',
+    'Why did we use PostgreSQL RLS?',
+    'What alternatives were rejected?',
+    'Explain the Kafka decision.',
+  ]
+
+  const ask = async () => {
+    if (!input.trim()) return
+    setLoading(true)
+    const localHits = memories.filter(m =>
+      `${m.title} ${m.entity} ${m.evidence}`.toLowerCase()
+        .includes(input.toLowerCase().split(/\s+/).find(w => w.length > 3) ?? input.toLowerCase())
+    )
+    if (localHits.length) {
+      setAnswer([{
+        ...demoContext(input)[0],
+        title: `Local context: ${input}`,
+        summary: `Found ${localHits.length} uploaded memory item${localHits.length === 1 ? '' : 's'} related to your question.`,
+        previous_decisions: localHits.map(m => m.title),
+        tradeoffs: localHits.map(m => m.evidence),
+        alternatives: localHits.filter(m => m.kind === 'alternative').map(m => m.title),
+        architecture_changes: localHits.filter(m => m.kind === 'architecture_change').map(m => m.title),
+        related_entities: [...new Set(localHits.map(m => m.entity))],
+        related_artifacts: [...new Set(localHits.map(m => m.source))],
+      }])
+      setLoading(false)
+      return
+    }
+    try {
+      const result = await api.query(input)
+      const ctx = (result.historical_context as HistoricalContext[]) || []
+      setAnswer(ctx.length ? ctx : demoContext(input))
+    } catch {
+      setAnswer(demoContext(input))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <SectionHeader eyebrow="Ask Anything" title="💬 Ask DecisionLens"
+        desc="Ask natural-language questions. Answers are grounded in captured engineering discussions and their source evidence."
+        action={memories.length ? <Pill tone="teal">{memories.length} local memories</Pill> : undefined}
+      />
+      {/* Suggested queries */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {suggested.map(q => (
+          <button key={q} onClick={() => setInput(q)}
+            className="rounded-full border border-indigo-500/20 bg-indigo-500/8 px-3 py-1.5 text-xs text-indigo-300 transition hover:border-indigo-500/40 hover:bg-indigo-500/14">
+            {q}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* Answer panel */}
+        <Panel className="min-h-96 p-6 lg:col-span-2 animate-fade-in">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-indigo-500/12 text-indigo-400">
+              <Sparkles size={15} />
+            </div>
+            DecisionLens Intelligence
+            {loading && <LoaderCircle size={14} className="animate-spin text-indigo-400 ml-1" />}
+          </div>
+
+          <div className="mt-6 min-h-48">
+            {loading ? (
+              <div className="flex items-center gap-3 text-slate-500">
+                <LoaderCircle size={18} className="animate-spin text-indigo-400" />
+                Searching engineering memory…
+              </div>
+            ) : (
+              <>
+                <p className="text-base leading-8 text-slate-200">{answer[0]?.summary}</p>
+                {answer[0]?.previous_decisions && (
+                  <div className="mt-5 space-y-3">
+                    {answer[0].previous_decisions.map(d => (
+                      <div key={d} className="flex items-start gap-3 rounded-xl border border-indigo-500/12 bg-indigo-500/6 p-4 text-sm text-slate-300">
+                        <CheckCircle2 size={15} className="mt-0.5 flex-shrink-0 text-emerald-400" />
+                        {d}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <form onSubmit={e => { e.preventDefault(); ask() }} className="mt-6 flex gap-3">
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Ask about Redis, Supabase, or an uploaded ADR…"
+              className="dl-input flex-1"
+            />
+            <button type="submit" disabled={loading}
+              className="btn-brand flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-40">
+              <Send size={15} />
+              Ask
+            </button>
+          </form>
+        </Panel>
+
+        {/* Evidence panel */}
+        <div className="space-y-4 animate-fade-in delay-100">
+          <Panel className="p-5">
+            <h2 className="mb-1 font-bold text-slate-100">🔍 Evidence Trail</h2>
+            <p className="mb-4 text-xs text-slate-500">Every answer traces back to source material.</p>
+            <div className="space-y-3">
+              {(answer[0]?.tradeoffs ?? ['No evidence yet']).map((t, i) => (
+                <blockquote key={i} className="evidence-quote">{t}</blockquote>
+              ))}
+            </div>
+            <div className="mt-5 border-t border-white/6 pt-4">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>Confidence</span>
+                <span className="text-2xl font-black text-slate-50">
+                  {Math.round((answer[0]?.confidence ?? 0.92) * 100)}%
+                </span>
+              </div>
+              <div className="progress-bar mt-2">
+                <div className="progress-fill" style={{ width: `${Math.round((answer[0]?.confidence ?? 0.92) * 100)}%`, background: '#6366f1' }} />
+              </div>
+            </div>
+          </Panel>
+
+          <Panel className="p-5">
+            <h2 className="mb-3 text-sm font-bold text-slate-100">🔗 Related</h2>
+            {(answer[0]?.related_entities ?? ['Supabase', 'Redis', 'PostgreSQL RLS']).map(e => (
+              <Pill key={e} tone="slate">{e}</Pill>
+            )).reduce<React.ReactNode[]>((acc, el, i) => [...acc, i > 0 ? ' ' : '', el], [])}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(answer[0]?.alternatives ?? []).slice(0, 2).map(a => (
+                <Pill key={a} tone="rose">⛔ {a}</Pill>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel className="p-5">
+            <h2 className="mb-3 text-sm font-bold text-slate-100">🏗️ Arch Changes</h2>
+            {(answer[0]?.architecture_changes ?? ['Tenant middleware sets context before PostgreSQL transactions.']).map(c => (
+              <div key={c} className="mt-2 flex items-start gap-2 text-xs text-slate-400">
+                <GitCommit size={13} className="mt-0.5 flex-shrink-0 text-violet-400" />
+                {c}
+              </div>
+            ))}
+          </Panel>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: UPLOAD
+═══════════════════════════════════════════════════════════════════ */
+function Upload({ toast, onMemory }: { toast: (t: string) => void; onMemory: (items: SessionMemory[]) => void }) {
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<SessionMemory[]>([])
+  const [busy, setBusy] = useState(false)
+  const ref = useRef<HTMLInputElement>(null)
+
+  const choose = async (f?: File | null) => {
+    setFile(f ?? null)
+    setPreview(f ? extractLocalMemories(f.name, await readFile(f)) : [])
+  }
+  const submit = async () => {
+    if (!file) return
+    setBusy(true)
+    const local = preview.length ? preview : extractLocalMemories(file.name, await readFile(file))
+    onMemory(local)
+    try {
+      await api.uploadMarkdown(file)
+      toast(`✅ Markdown queued — ${local.length} local memories added.`)
+    } catch {
+      toast(`⚠️ API offline — ${local.length} local demo memories added.`)
+    } finally {
+      setBusy(false) }
+  }
+
+  return (
+    <>
+      <SectionHeader eyebrow="Ingestion" title="📤 Ingest Documents"
+        desc="Add ADRs, RFCs, and architecture notes. DecisionLens extracts structured memories immediately — no LLM needed for the demo brain." />
+      <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+        {/* Drop zone */}
+        <Panel className="p-6 animate-fade-in">
+          <button
+            onClick={() => ref.current?.click()}
+            className="drop-zone flex min-h-56 w-full flex-col items-center justify-center p-8 text-center"
+          >
+            <div className="animate-float grid h-16 w-16 place-items-center rounded-2xl bg-indigo-500/12 text-indigo-400 mb-4">
+              <UploadCloud size={32} />
+            </div>
+            <p className="font-semibold text-slate-200">Drop a Markdown file here</p>
+            <p className="mt-2 text-sm text-slate-600">or click to browse · .md and .mdx</p>
+            <input ref={ref} onChange={e => choose(e.target.files?.[0])} type="file" accept=".md,.mdx,text/markdown" className="hidden" />
+          </button>
+
+          {file && (
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-white/8 bg-white/4 p-4 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <FileText size={18} className="text-indigo-400" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">{file.name}</p>
+                  <p className="text-xs text-slate-600">{Math.ceil(file.size / 1024)} KB · {preview.length} extractable memories</p>
+                </div>
+              </div>
+              <button onClick={() => choose(null)} className="text-slate-500 transition hover:text-slate-300">
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          <button
+            disabled={!file || busy}
+            onClick={submit}
+            className="btn-brand mt-4 w-full justify-center disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy ? (
+              <><LoaderCircle size={15} className="animate-spin" /> Sending to ingestion queue…</>
+            ) : (
+              <><Sparkles size={15} /> Upload and add to memory graph</>
+            )}
+          </button>
+
+          {/* Sample ADR hint */}
+          <div className="mt-5 rounded-xl border border-white/6 bg-white/2 p-4">
+            <p className="text-xs font-semibold text-slate-400 mb-2">📝 Sample ADR format:</p>
+            <div className="code-block text-[11px]">
+              <span className="kw"># Session Revocation ADR</span>{'\n'}
+              <span className="str">Decision: Use Redis for immediate session revocation.</span>{'\n'}
+              <span className="cmt">Tradeoff: Redis adds operational ownership.</span>{'\n'}
+              <span className="cmt">Alternative: Fully stateless JWT sessions.</span>{'\n'}
+              <span className="num">Architecture Change: Session middleware checks Redis.</span>
+            </div>
+          </div>
+        </Panel>
+
+        {/* Extraction preview */}
+        <Panel className="p-6 animate-fade-in delay-100">
+          <div className="flex items-center gap-2 mb-1">
+            <Eye size={15} className="text-teal-400" />
+            <h2 className="font-bold text-slate-100">Local Extraction Preview</h2>
+          </div>
+          <p className="mb-4 text-xs text-slate-500">
+            This deterministic demo brain works without Ollama. For richer extraction,{' '}
+            set <code className="rounded bg-white/6 px-1 text-indigo-300">EXTRACTION_PROVIDER=ollama</code>.
+          </p>
+          <div className="space-y-3">
+            {(preview.length ? preview : [{
+              id: 'empty', title: 'No file selected yet',
+              summary: 'Upload a Markdown file with "Decision:" or "Tradeoff:" lines to see instant memories.',
+              kind: 'document' as const, entity: 'Demo', source: '', evidence: '', timestamp: '',
+            }]).map(item => {
+              const kindColors: Record<string, string> = {
+                decision: 'brand', tradeoff: 'amber', alternative: 'rose',
+                architecture_change: 'violet', open_question: 'cyan', document: 'slate',
+              }
+              return (
+                <div key={item.id} className="rounded-xl border border-white/6 bg-white/4 p-4 animate-fade-in">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <p className="text-sm font-semibold text-slate-200 leading-tight">{item.title}</p>
+                    <Pill tone={kindColors[item.kind] as any}>{kindLabel(item.kind)}</Pill>
+                  </div>
+                  {item.evidence && (
+                    <blockquote className="evidence-quote mt-2 text-[11px]">{item.evidence}</blockquote>
+                  )}
+                  {!item.evidence && (
+                    <p className="text-xs text-slate-600">{item.summary}</p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Upload stats */}
+          {preview.length > 0 && (
+            <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/6 pt-5">
+              {[
+                { label: 'Memories', value: preview.length },
+                { label: 'Decisions', value: preview.filter(p => p.kind === 'decision').length },
+                { label: 'Tradeoffs', value: preview.filter(p => p.kind === 'tradeoff').length },
+              ].map(s => (
+                <div key={s.label} className="text-center">
+                  <p className="text-xl font-black text-slate-100">{s.value}</p>
+                  <p className="text-[11px] text-slate-600">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </div>
+    </>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PAGE: SETTINGS
+═══════════════════════════════════════════════════════════════════ */
+function SettingsPage() {
+  const integrations = [
+    { icon: <GitBranch size={18}/>, name: 'GitHub', status: 'Sample data active', color: '#818cf8', configured: true },
+    { icon: <MessageSquare size={18}/>, name: 'Slack', status: 'Sample data active', color: '#8b5cf6', configured: true },
+    { icon: <FileText size={18}/>, name: 'Markdown', status: 'Upload working', color: '#14b8a6', configured: true },
+    { icon: <Globe size={18}/>, name: 'Notion', status: 'Planned', color: '#64748b', configured: false },
+  ]
+  return (
+    <>
+      <SectionHeader eyebrow="Workspace" title="⚙️ Settings"
+        desc="Configure your DecisionLens workspace, API connections, and extraction providers." />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="space-y-4">
+          <Panel className="p-5 animate-fade-in">
+            <div className="flex items-center gap-2 mb-4">
+              <Server size={16} className="text-indigo-400" />
+              <h2 className="font-bold text-slate-100">API Connection</h2>
+            </div>
+            <div className="code-block">
+              {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'}
+            </div>
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/6 p-3 text-sm text-emerald-400">
+              <CheckCircle2 size={15} />
+              Demo fallback data is enabled when API is unavailable.
+            </div>
+          </Panel>
+
+          <Panel className="p-5 animate-fade-in delay-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain size={16} className="text-violet-400" />
+              <h2 className="font-bold text-slate-100">Brain Mode</h2>
+            </div>
+            {[
+              { label: 'Browser Demo Brain', desc: 'No setup needed. Parses "Decision:" patterns instantly.', active: true, color: '#6366f1' },
+              { label: 'Local Ollama Brain',  desc: 'qwen3:8b · Private extraction · Best accuracy.',         active: false, color: '#14b8a6' },
+              { label: 'Enterprise LLM',      desc: 'GPT-4, Claude, Gemini · Production scale.',              active: false, color: '#f59e0b' },
+            ].map(m => (
+              <div key={m.label} className={`mt-3 rounded-xl border p-4 ${m.active ? 'border-indigo-500/25 bg-indigo-500/8' : 'border-white/6 bg-white/2'}`}>
+                <div className="flex items-center justify-between">
+                  <p className={`text-sm font-semibold ${m.active ? 'text-indigo-300' : 'text-slate-400'}`}>{m.label}</p>
+                  {m.active && <Pill tone="brand">Active</Pill>}
+                </div>
+                <p className="mt-1 text-xs text-slate-600">{m.desc}</p>
+              </div>
+            ))}
+          </Panel>
+        </div>
+
+        <div className="space-y-4">
+          <Panel className="p-5 animate-fade-in delay-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap size={16} className="text-amber-400" />
+              <h2 className="font-bold text-slate-100">Integrations</h2>
+            </div>
+            {integrations.map(itg => (
+              <div key={itg.name} className="flex items-center gap-3 border-t border-white/5 py-4 first:border-0 first:pt-0">
+                <div className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${itg.color}15`, color: itg.color }}>
+                  {itg.icon}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-slate-200">{itg.name}</p>
+                  <p className="text-xs text-slate-600">{itg.status}</p>
+                </div>
+                <Pill tone={itg.configured ? 'green' : 'slate'}>
+                  {itg.configured ? '✅ Active' : '⚪ Planned'}
+                </Pill>
+              </div>
+            ))}
+          </Panel>
+
+          <Panel className="p-5 animate-fade-in delay-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Shield size={16} className="text-teal-400" />
+              <h2 className="font-bold text-slate-100">Privacy & Deployment</h2>
+            </div>
+            {[
+              { icon: <Lock size={13}/>, label: 'All data stays local', desc: 'No external APIs or cloud required' },
+              { icon: <Server size={13}/>, label: 'Self-hosted on your infrastructure', desc: 'Docker Compose single-command deploy' },
+              { icon: <Shield size={13}/>, label: 'Supermemory runs on localhost:6767', desc: 'Fully private long-term memory' },
+            ].map(item => (
+              <div key={item.label} className="flex items-start gap-3 border-t border-white/5 py-3 first:border-0 first:pt-0 text-xs">
+                <span className="mt-0.5 text-teal-400 flex-shrink-0">{item.icon}</span>
+                <div>
+                  <p className="font-semibold text-slate-300">{item.label}</p>
+                  <p className="text-slate-600">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </Panel>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ROOT APP
+═══════════════════════════════════════════════════════════════════ */
+export function App() {
+  const [page, setPage] = useState<Page>('dashboard')
+  const [dark] = useState(true) // always dark — premium look
+  const [setDark] = useState(() => (_: boolean) => {})  // keep API compat
+  const [toast, setToast] = useState('')
+  const [apiStatus, setApiStatus] = useState<'checking' | 'live' | 'demo'>('checking')
+  const [memories, setMemories] = useState<SessionMemory[]>([])
+  const addMemories = (items: SessionMemory[]) => setMemories(cur => [...cur, ...items])
+
+  useEffect(() => {
+    api.health().then(() => setApiStatus('live')).catch(() => setApiStatus('demo'))
+  }, [])
+  useEffect(() => {
+    if (!toast) return
+    const id = setTimeout(() => setToast(''), 4000)
+    return () => clearTimeout(id)
+  }, [toast])
+
+  const content = useMemo(() => ({
+    dashboard: <Dashboard />,
+    graph:     <MemoryGraph memories={memories} />,
+    ask:       <Ask memories={memories} />,
+    timeline:  <Timeline />,
+    recurring: <Recurring />,
+    trends:    <Trends />,
+    history:   <History />,
+    upload:    <Upload toast={setToast} onMemory={addMemories} />,
+    settings:  <SettingsPage />,
+  })[page], [page, memories])
+
+  return (
+    <PageShell
+      page={page}
+      onPage={setPage}
+      dark={dark}
+      setDark={setDark as any}
+      apiStatus={apiStatus}
+    >
+      {content}
+      {toast && (
+        <div className="toast fixed bottom-6 right-6 z-50 max-w-sm">
+          {toast}
+        </div>
+      )}
+    </PageShell>
+  )
+}
