@@ -3,7 +3,7 @@ import {
   AlertCircle, BarChart3, Bot, Brain,
   CheckCircle2, ChevronRight, DatabaseZap,
   FileText, GitCommit, GitPullRequest, GitBranch, Globe,
-  Layers, LoaderCircle, Network, Route, Send, Shield,
+  Layers, LoaderCircle, Network, Route, Search, Send, Shield,
   Sparkles, TrendingUp, UploadCloud,
   Workflow, X, Zap, Activity, Eye, Lock, Server, Cpu,
   MessageSquare, Users, Award, Target, Flame,
@@ -161,82 +161,99 @@ function Sparkline({ values, color = '#6366f1', height = 40 }: {
 }
 
 /* ─── Pipeline Flowchart ─── */
+/* ─── Vertical Pipeline Steps ─── */
 function PipelineFlow() {
   const steps = [
-    { icon: <GitBranch size={14}/>,   label: 'Sources',  sub: 'GitHub · Slack · MD', color: '#6366f1' },
-    { icon: <Route size={14}/>,        label: 'Ingest',   sub: 'Normalize artifacts', color: '#8b5cf6' },
-    { icon: <Sparkles size={14}/>,     label: 'Extract',  sub: 'LLM knowledge extraction', color: '#14b8a6' },
-    { icon: <DatabaseZap size={14}/>,  label: 'Memory',   sub: 'Supermemory @ :6767', color: '#06b6d4' },
-    { icon: <Bot size={14}/>,          label: 'Intelligence', sub: 'Evidence-backed answers', color: '#f59e0b' },
+    { icon: <GitBranch size={13}/>,  label: 'Sources',      sub: 'GitHub · Slack · Markdown',    color: '#6366f1', num: '01' },
+    { icon: <Route size={13}/>,       label: 'Ingest',       sub: 'Normalize → Artifact queue',   color: '#8b5cf6', num: '02' },
+    { icon: <Sparkles size={13}/>,    label: 'Extract',      sub: 'EKPP · Ollama / Demo brain',   color: '#14b8a6', num: '03' },
+    { icon: <DatabaseZap size={13}/>, label: 'Memory',       sub: 'Supermemory @ localhost:6767', color: '#06b6d4', num: '04' },
+    { icon: <Bot size={13}/>,         label: 'Intelligence', sub: 'Evidence-backed Q&A + trends', color: '#f59e0b', num: '05' },
   ]
   return (
-    <div className="flex items-center gap-1 overflow-x-auto pb-2">
+    <div className="space-y-1.5">
       {steps.map((s, i) => (
-        <div key={s.label} className="flex items-center gap-1">
-          <div
-            className="flow-node active flex items-center gap-2 whitespace-nowrap animate-fade-in"
-            style={{ animationDelay: `${i * 100}ms`, borderColor: `${s.color}40`, color: s.color }}
-          >
+        <div key={s.label} className="flex items-center gap-2 animate-fade-in" style={{ animationDelay: `${i * 90}ms` }}>
+          <div className="flex flex-col items-center" style={{ width: 28 }}>
+            <div className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg text-[10px] font-black"
+              style={{ background: `${s.color}20`, color: s.color, border: `1px solid ${s.color}35` }}>
+              {s.num}
+            </div>
+            {i < steps.length - 1 && (
+              <div style={{ width: 1, height: 8, background: `linear-gradient(to bottom, ${s.color}40, transparent)`, margin: '2px 0' }} />
+            )}
+          </div>
+          <div className="flex flex-1 items-center gap-2 rounded-lg px-2.5 py-2"
+            style={{ background: `${s.color}09`, border: `1px solid ${s.color}20` }}>
             <span style={{ color: s.color }}>{s.icon}</span>
-            <div>
-              <p className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</p>
-              <p className="text-[10px] text-slate-600 hidden sm:block">{s.sub}</p>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold leading-tight" style={{ color: s.color }}>{s.label}</p>
+              <p className="truncate text-[10px] text-slate-600">{s.sub}</p>
             </div>
           </div>
-          {i < steps.length - 1 && (
-            <div className="flex-shrink-0">
-              <svg width="20" height="20" viewBox="0 0 20 20">
-                <line x1="2" y1="10" x2="18" y2="10" stroke="rgba(99,102,241,0.3)" strokeWidth="1.5"
-                  className="graph-line" strokeDasharray="4 2" />
-                <polygon points="14,7 18,10 14,13" fill="rgba(99,102,241,0.4)" />
-              </svg>
-            </div>
-          )}
         </div>
       ))}
     </div>
   )
 }
 
-/* ─── Mindmap SVG ─── */
+/* ─── Enhanced Radial Mindmap ─── */
 function Mindmap() {
-  const center = { x: 160, y: 110 }
-  const nodes = [
-    { x: 40,  y: 35,  label: 'GitHub PRs',      color: '#6366f1', r: 22 },
-    { x: 270, y: 35,  label: 'Slack Threads',   color: '#8b5cf6', r: 22 },
-    { x: 40,  y: 185, label: 'Markdown ADRs',   color: '#14b8a6', r: 22 },
-    { x: 270, y: 185, label: 'Decision History', color: '#06b6d4', r: 24 },
-    { x: 160, y: 10,  label: 'Evidence',         color: '#f59e0b', r: 20 },
-    { x: 160, y: 205, label: 'Supermemory',      color: '#f43f5e', r: 26 },
-  ]
+  const cx = 160; const cy = 118
+  const satellites = [
+    { label: 'GitHub PRs',    color: '#6366f1', angle: -90,  r: 82, icon: '🐙', desc: 'PRs & commits' },
+    { label: 'Slack Threads', color: '#8b5cf6', angle: -25,  r: 86, icon: '💬', desc: 'Discussions' },
+    { label: 'Supermemory',   color: '#06b6d4', angle:  45,  r: 83, icon: '🧠', desc: ':6767' },
+    { label: 'Decisions',     color: '#f59e0b', angle: 120,  r: 82, icon: '📜', desc: 'Traceability' },
+    { label: 'Markdown ADRs', color: '#14b8a6', angle: 195,  r: 84, icon: '📝', desc: 'Architecture' },
+    { label: 'Evidence',      color: '#f43f5e', angle: 255,  r: 82, icon: '🔍', desc: 'Source proof' },
+  ].map(n => ({
+    ...n,
+    x: cx + n.r * Math.cos((n.angle * Math.PI) / 180),
+    y: cy + n.r * Math.sin((n.angle * Math.PI) / 180),
+  }))
   return (
-    <svg viewBox="0 0 320 230" className="w-full" style={{ maxHeight: 200 }}>
+    <svg viewBox="0 0 320 236" className="w-full" style={{ maxHeight: 230 }}>
       <defs>
-        <radialGradient id="cgr" cx="50%" cy="50%">
-          <stop offset="0%" stopColor="rgba(99,102,241,0.4)" />
-          <stop offset="100%" stopColor="rgba(99,102,241,0.1)" />
+        <radialGradient id="hubgr" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="rgba(99,102,241,0.5)" />
+          <stop offset="100%" stopColor="rgba(99,102,241,0.04)" />
         </radialGradient>
+        <filter id="glw">
+          <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
       </defs>
-      {/* Lines */}
-      {nodes.map((n, i) => (
-        <line key={i} x1={center.x} y1={center.y} x2={n.x} y2={n.y}
-          stroke={n.color} strokeOpacity="0.3" strokeWidth="1" strokeDasharray="4 3"
-          className="graph-line" style={{ animationDelay: `${i * 150}ms` }} />
+      {/* Orbit ring */}
+      <circle cx={cx} cy={cy} r="88" fill="none" stroke="rgba(99,102,241,0.06)" strokeWidth="1" strokeDasharray="3 6"/>
+      {/* Glow ring behind center */}
+      <circle cx={cx} cy={cy} r="38" fill="rgba(99,102,241,0.06)" filter="url(#glw)"/>
+      {/* Spoke lines */}
+      {satellites.map((n, i) => (
+        <line key={i} x1={cx} y1={cy} x2={n.x} y2={n.y}
+          stroke={n.color} strokeOpacity="0.4" strokeWidth="1.3"
+          strokeDasharray="5 3" className="graph-line"
+          style={{ animationDelay: `${i * 110}ms` }}/>
       ))}
-      {/* Center node */}
-      <circle cx={center.x} cy={center.y} r="32" fill="url(#cgr)" stroke="#6366f1" strokeWidth="1.5" />
-      <text x={center.x} y={center.y - 4} textAnchor="middle" fontSize="8" fill="#818cf8" fontWeight="700">Decision</text>
-      <text x={center.x} y={center.y + 8} textAnchor="middle" fontSize="8" fill="#818cf8" fontWeight="700">Lens 🧠</text>
-      {/* Outer nodes */}
-      {nodes.map((n, i) => (
-        <g key={i} className="graph-node" style={{ animationDelay: `${i * 100 + 300}ms` }}>
-          <circle cx={n.x} cy={n.y} r={n.r} fill="rgba(13,17,38,0.9)" stroke={n.color} strokeWidth="1.2" />
-          <text x={n.x} y={n.y + 3} textAnchor="middle" fontSize="6.5" fill={n.color} fontWeight="600">{n.label}</text>
+      {/* Center hub */}
+      <circle cx={cx} cy={cy} r="30" fill="url(#hubgr)" stroke="#6366f1" strokeWidth="1.5" filter="url(#glw)"/>
+      <circle cx={cx} cy={cy} r="24" fill="rgba(7,10,26,0.94)" stroke="rgba(99,102,241,0.35)" strokeWidth="0.8"/>
+      <text x={cx} y={cy-5} textAnchor="middle" fontSize="9" fill="#818cf8" fontWeight="800">Decision</text>
+      <text x={cx} y={cy+7} textAnchor="middle" fontSize="9" fill="#818cf8" fontWeight="800">Lens 🧠</text>
+      {/* Satellite nodes */}
+      {satellites.map((n, i) => (
+        <g key={i} className="graph-node" style={{ animationDelay: `${i * 80 + 400}ms` }}>
+          <circle cx={n.x} cy={n.y} r="22" fill={`${n.color}12`} filter="url(#glw)"/>
+          <circle cx={n.x} cy={n.y} r="20" fill="rgba(7,10,26,0.95)" stroke={n.color} strokeWidth="1.3"/>
+          <text x={n.x} y={n.y - 5} textAnchor="middle" fontSize="10">{n.icon}</text>
+          <text x={n.x} y={n.y + 6} textAnchor="middle" fontSize="5.8" fill={n.color} fontWeight="700">{n.label}</text>
+          <text x={n.x} y={n.y + 13} textAnchor="middle" fontSize="4.5" fill="#475569">{n.desc}</text>
         </g>
       ))}
     </svg>
   )
 }
+
 
 /* ─── Memory type for session ─── */
 type SessionMemory = {
@@ -280,7 +297,7 @@ function extractLocalMemories(filename: string, text: string): SessionMemory[] {
 /* ══════════════════════════════════════════════════════════════════
    PAGE: DASHBOARD
 ═══════════════════════════════════════════════════════════════════ */
-function Dashboard() {
+function Dashboard({ onSearch }: { onSearch?: () => void }) {
   const stats = [
     { icon: <Target size={20}/>, value: '48', label: 'Decisions captured',     delta: '+12 this week', color: '#6366f1', sparkline: [12,18,14,22,19,27,31,25,35,38,42,48] },
     { icon: <Activity size={20}/>, value: '31', label: 'Tradeoffs tracked',    delta: '+8 this week',  color: '#14b8a6', sparkline: [5,9,11,13,14,18,20,22,25,27,29,31] },
@@ -516,89 +533,162 @@ function Dashboard() {
 /* ══════════════════════════════════════════════════════════════════
    PAGE: MEMORY GRAPH
 ═══════════════════════════════════════════════════════════════════ */
-function MemoryGraph({ memories }: { memories: SessionMemory[] }) {
-  const baseNodes = [
-    { id: 'Supermemory', x: 50,  y: 14,  r: 8,  type: 'memory',      color: '#6366f1', emoji: '🧠' },
-    { id: 'Supabase',    x: 22,  y: 35,  r: 6,  type: 'source',      color: '#14b8a6', emoji: '🗄️' },
-    { id: 'Redis',       x: 76,  y: 35,  r: 7,  type: 'decision',    color: '#f59e0b', emoji: '⚡' },
-    { id: 'Kafka',       x: 83,  y: 66,  r: 6,  type: 'decision',    color: '#8b5cf6', emoji: '📨' },
-    { id: 'PostgreSQL',  x: 32,  y: 68,  r: 7,  type: 'decision',    color: '#06b6d4', emoji: '🐘' },
-    { id: 'Firebase',    x: 14,  y: 58,  r: 5,  type: 'alternative', color: '#f43f5e', emoji: '🔥' },
-    { id: 'Stripe',      x: 64,  y: 18,  r: 5,  type: 'source',      color: '#10b981', emoji: '💳' },
-    { id: 'GitHub',      x: 20,  y: 16,  r: 5,  type: 'source',      color: '#818cf8', emoji: '🐙' },
-  ]
-  const uploadedNodes = memories.slice(-4).map((m, i) => ({
-    id: m.entity, x: 10 + (i % 4) * 22, y: 86 + Math.floor(i / 4) * 10, r: 5, type: m.kind, color: '#14b8a6', emoji: '📄', memory: m,
-  }))
-  const nodes = [...baseNodes, ...uploadedNodes]
-  const [sel, setSel] = useState(nodes[2])
-  const selMem = 'memory' in sel ? (sel as typeof uploadedNodes[0]).memory : undefined
 
-  const typeColor = (t: string) => ({ decision:'#f59e0b', alternative:'#f43f5e', tradeoff:'#06b6d4', memory:'#6366f1', source:'#10b981' }[t] || '#6366f1')
+// Graph data constants
+const MG_NODES = [
+  { id: 'DecisionLens', x: 50,  y: 50,  r: 8.5, type: 'hub',         color: '#6366f1', label: 'DecisionLens 🧠', desc: 'Central memory hub' },
+  { id: 'Supermemory',  x: 50,  y: 17,  r: 6.5, type: 'memory',      color: '#818cf8', label: 'Supermemory',     desc: 'Semantic memory @ :6767' },
+  { id: 'Redis',        x: 80,  y: 30,  r: 6,   type: 'decision',    color: '#f59e0b', label: 'Redis ⚡',         desc: 'Session revocation' },
+  { id: 'Kafka',        x: 85,  y: 58,  r: 5.5, type: 'decision',    color: '#8b5cf6', label: 'Kafka 📨',         desc: 'Event streaming' },
+  { id: 'PostgreSQL',   x: 50,  y: 83,  r: 6,   type: 'decision',    color: '#06b6d4', label: 'PostgreSQL 🐘',   desc: 'Primary DB' },
+  { id: 'Supabase',     x: 20,  y: 58,  r: 5.5, type: 'source',      color: '#14b8a6', label: 'Supabase 🗄️',    desc: 'Auth + RLS' },
+  { id: 'GitHub',       x: 18,  y: 30,  r: 5,   type: 'source',      color: '#818cf8', label: 'GitHub 🐙',       desc: 'PRs & commits' },
+  { id: 'Firebase',     x: 70,  y: 10,  r: 4,   type: 'alternative', color: '#f43f5e', label: 'Firebase 🔥',     desc: '⛔ Rejected' },
+  { id: 'Stripe',       x: 88,  y: 42,  r: 4,   type: 'source',      color: '#10b981', label: 'Stripe 💳',       desc: 'Payment events' },
+  { id: 'Slack',        x: 10,  y: 45,  r: 4,   type: 'source',      color: '#818cf8', label: 'Slack 💬',        desc: 'Eng. threads' },
+  { id: 'Markdown',     x: 30,  y: 90,  r: 3.8, type: 'source',      color: '#14b8a6', label: 'ADRs 📝',         desc: 'Architecture docs' },
+  { id: 'JWT',          x: 70,  y: 90,  r: 3.8, type: 'alternative', color: '#f43f5e', label: 'JWT ⛔',           desc: 'Rejected alt.' },
+]
+
+const MG_EDGES = [
+  ['DecisionLens','Supermemory'],['DecisionLens','Redis'],['DecisionLens','Kafka'],
+  ['DecisionLens','PostgreSQL'],['DecisionLens','Supabase'],['DecisionLens','GitHub'],
+  ['Supermemory','Redis'],['Supermemory','PostgreSQL'],
+  ['Redis','Kafka'],['Supabase','PostgreSQL'],
+  ['GitHub','Slack'],['Stripe','Kafka'],
+  ['Firebase','Supabase'],['JWT','Redis'],['Markdown','PostgreSQL'],
+]
+
+const MG_DETAILS: Record<string, { decisions: string[]; source: string; tradeoff: string; status: 'active'|'rejected'|'hub'|'source' }> = {
+  DecisionLens:{ decisions:['Central engineering memory OS — coordinates extraction + retrieval'],                       source:'Platform core',      tradeoff:'Connects all sources to Supermemory',               status:'hub' },
+  Supermemory: { decisions:['Stores all knowledge objects as semantic memories'],                                         source:'localhost:6767',     tradeoff:'Long-term memory backbone — no cloud required',     status:'active' },
+  Redis:       { decisions:['Use Redis for immediate session revocation'],                                                 source:'slack:C-PLATFORM',   tradeoff:'Operational overhead vs stateless JWT',             status:'active' },
+  Kafka:       { decisions:['Kafka as durable event boundary for billing & audit'],                                       source:'github:pr-184',      tradeoff:'Complexity vs guaranteed delivery',                 status:'active' },
+  PostgreSQL:  { decisions:['Primary consistency boundary for all writes'],                                               source:'github:bc3d881',     tradeoff:'ACID guarantees at cost of horizontal scale',       status:'active' },
+  Supabase:    { decisions:['Supabase Auth + PostgreSQL RLS for multi-tenant isolation'],                                 source:'markdown:ADR-001',   tradeoff:'Debugging RLS policies is complex',                 status:'active' },
+  GitHub:      { decisions:['Source of PR, commit, and comment knowledge artifacts'],                                     source:'github-connector',   tradeoff:'Needs token to access private repos',              status:'source' },
+  Firebase:    { decisions:['❌ Considered before Supabase — rejected due to vendor lock-in'],                            source:'slack:C-PLATFORM',   tradeoff:'Cost at scale + limited self-hosting options',      status:'rejected' },
+  Stripe:      { decisions:['Stripe webhook envelopes persisted before Kafka publication'],                               source:'github:pr-184',      tradeoff:'Idempotent payment processing',                     status:'source' },
+  Slack:       { decisions:['Engineering thread extraction via Slack connector'],                                         source:'slack-connector',    tradeoff:'Requires bot token + signing secret',              status:'source' },
+  Markdown:    { decisions:['ADR and RFC files ingested as memory artifacts'],                                            source:'markdown-connector', tradeoff:'Requires "Decision:" pattern for extraction',      status:'source' },
+  JWT:         { decisions:['❌ Fully stateless JWT sessions rejected — cannot revoke'],                                  source:'slack:C-PLATFORM',   tradeoff:'Cannot revoke immediately — chose Redis instead',  status:'rejected' },
+}
+
+function MemoryGraph({ memories }: { memories: SessionMemory[] }) {
+  const uploadedNodes = memories.slice(-3).map((m, i) => ({
+    id: `uploaded-${i}`, x: 25 + i * 25, y: 97,
+    r: 3.5, type: m.kind as string, color: '#10b981',
+    label: `📄 ${m.entity.slice(0,8)}`, desc: m.kind.replace(/_/g,' '),
+  }))
+  const allNodes = [...MG_NODES, ...uploadedNodes]
+  const [selId, setSelId] = useState<string>('Redis')
+  const sel = allNodes.find(n => n.id === selId) ?? MG_NODES[2]
+  const detail = MG_DETAILS[selId]
+
+  const statusBadge = {
+    active:   { tone: 'green'  as const, label: '✅ Adopted' },
+    rejected: { tone: 'rose'   as const, label: '⛔ Rejected' },
+    hub:      { tone: 'brand'  as const, label: '🧠 Hub' },
+    source:   { tone: 'teal'   as const, label: '🔌 Source' },
+  }[detail?.status ?? 'source']
 
   return (
     <>
       <SectionHeader eyebrow="Knowledge Graph" title="🕸️ Memory Graph"
-        desc="An Obsidian-style interactive map of engineering decisions, source artifacts, technologies, and extracted memories."
-        action={<Pill tone={memories.length ? 'teal' : 'brand'}>{memories.length ? `${memories.length} uploaded` : 'Demo graph'}</Pill>}
+        desc="Interactive hub-and-spoke knowledge map. Click any node to inspect decisions, tradeoffs, and source evidence."
+        action={<Pill tone={memories.length ? 'teal' : 'brand'}>{memories.length ? `+${memories.length} uploaded` : 'Demo corpus'}</Pill>}
       />
-      <div className="grid gap-5 xl:grid-cols-[1.5fr_0.5fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.6fr_0.4fr]">
+        {/* ── SVG Graph ── */}
         <Panel className="overflow-hidden p-0 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-white/6 p-4">
+          <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(99,102,241,0.12)' }}>
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
-              <Network size={16} className="text-indigo-400" />
+              <Network size={15} className="text-indigo-400" />
               Decision memory map
             </div>
-            <div className="flex gap-2">
-              <Pill tone="slate">click nodes</Pill>
-              <Pill tone="teal">evidence first</Pill>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-600">{allNodes.length} nodes · {MG_EDGES.length + uploadedNodes.length} edges</span>
+              <Pill tone="violet">click to explore</Pill>
             </div>
           </div>
-          <svg
-            viewBox="0 0 100 100"
-            className="w-full cursor-default"
-            style={{
-              height: 500,
-              background: 'radial-gradient(ellipse at 50% 40%, rgba(99,102,241,0.08) 0%, transparent 60%)',
-            }}
-          >
-            {/* grid lines */}
-            {Array.from({ length: 10 }).map((_, i) => (
-              <line key={`h${i}`} x1="0" y1={i * 10} x2="100" y2={i * 10} stroke="rgba(99,102,241,0.04)" strokeWidth="0.3" />
-            ))}
-            {Array.from({ length: 10 }).map((_, i) => (
-              <line key={`v${i}`} x1={i * 10} y1="0" x2={i * 10} y2="100" stroke="rgba(99,102,241,0.04)" strokeWidth="0.3" />
-            ))}
+          <svg viewBox="0 0 100 105" className="w-full cursor-pointer" style={{ height: 500 }}>
+            <defs>
+              <radialGradient id="mg-bg" cx="50%" cy="48%">
+                <stop offset="0%" stopColor="rgba(99,102,241,0.08)"/>
+                <stop offset="60%" stopColor="rgba(6,8,22,0)"/>
+              </radialGradient>
+              <filter id="mg-glow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="1.2" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="mg-glow-sm" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="0.6" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <pattern id="mg-dots" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="0.2" fill="rgba(99,102,241,0.18)"/>
+              </pattern>
+            </defs>
+
+            {/* Background */}
+            <rect x="0" y="0" width="100" height="105" fill="rgba(5,8,22,1)"/>
+            <rect x="0" y="0" width="100" height="105" fill="url(#mg-dots)"/>
+            <ellipse cx="50" cy="50" rx="48" ry="46" fill="url(#mg-bg)"/>
+
             {/* Edges */}
-            {nodes.flatMap((n, i) =>
-              nodes.slice(i + 1)
-                .filter(o => Math.hypot(o.x - n.x, o.y - n.y) < 45)
-                .slice(0, 2)
-                .map(o => (
-                  <line key={`${n.id}-${o.id}`}
-                    x1={n.x} y1={n.y} x2={o.x} y2={o.y}
-                    stroke={n.color} strokeOpacity="0.12" strokeWidth="0.4"
-                    className="graph-line" />
-                ))
-            )}
-            {/* Nodes */}
-            {nodes.map((n, i) => {
-              const isSelected = sel.id === n.id
+            {MG_EDGES.map(([a, b], i) => {
+              const na = allNodes.find(n => n.id === a)
+              const nb = allNodes.find(n => n.id === b)
+              if (!na || !nb) return null
+              const isActive = selId === a || selId === b
               return (
-                <g key={`${n.id}-${i}`}
-                  onClick={() => setSel(n)}
-                  className="graph-node cursor-pointer"
-                  style={{ animationDelay: `${i * 60}ms` }}
-                >
-                  {isSelected && (
-                    <circle cx={n.x} cy={n.y} r={n.r + 4} fill={n.color} opacity="0.12" className="animate-ping" />
-                  )}
-                  <circle cx={n.x} cy={n.y} r={n.r + 2} fill={n.color} opacity={isSelected ? 0.2 : 0.06} />
-                  <circle cx={n.x} cy={n.y} r={n.r} fill="rgba(13,17,38,0.92)" stroke={n.color}
-                    strokeWidth={isSelected ? 1.2 : 0.7} opacity={isSelected ? 1 : 0.85} />
-                  <text x={n.x} y={n.y + 2} textAnchor="middle" fontSize="3.2"
-                    fill={isSelected ? n.color : '#94a3b8'} fontWeight={isSelected ? '700' : '500'}>
-                    {n.id}
+                <line key={i}
+                  x1={na.x} y1={na.y} x2={nb.x} y2={nb.y}
+                  stroke={isActive ? (na as any).color ?? '#6366f1' : 'rgba(99,102,241,0.2)'}
+                  strokeWidth={isActive ? 0.55 : 0.22}
+                  strokeOpacity={isActive ? 0.9 : 1}
+                  strokeDasharray={isActive ? '' : '1.5 2'}
+                  className="graph-line"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                />
+              )
+            })}
+            {/* Uploaded node edges */}
+            {uploadedNodes.map((un, i) => {
+              const hub = allNodes[0]
+              return <line key={`ue${i}`} x1={hub.x} y1={hub.y} x2={un.x} y2={un.y}
+                stroke="#10b981" strokeWidth="0.25" strokeOpacity="0.5" strokeDasharray="2 2"/>
+            })}
+
+            {/* Nodes */}
+            {allNodes.map((n, i) => {
+              const isSelected = selId === n.id
+              const c = (n as any).color ?? '#6366f1'
+              const r = (n as any).r ?? 4
+              const isHub = n.type === 'hub'
+              return (
+                <g key={n.id} onClick={() => setSelId(n.id)}
+                  style={{ cursor: 'pointer', animationDelay: `${i * 50}ms` }} className="graph-node">
+                  {/* Outer pulse ring */}
+                  {isSelected && <circle cx={n.x} cy={n.y} r={r + 5} fill={c} opacity="0.07"/>}
+                  {isSelected && <circle cx={n.x} cy={n.y} r={r + 3.5} fill="none" stroke={c} strokeWidth="0.5" strokeOpacity="0.4"/>}
+                  {/* Glow */}
+                  <circle cx={n.x} cy={n.y} r={r + 1.5} fill={c}
+                    opacity={isSelected ? 0.22 : isHub ? 0.12 : 0.04}
+                    filter={isSelected || isHub ? 'url(#mg-glow)' : 'url(#mg-glow-sm)'}/>
+                  {/* Body */}
+                  <circle cx={n.x} cy={n.y} r={r}
+                    fill={isHub ? `rgba(70,60,200,0.35)` : `rgba(5,8,22,0.97)`}
+                    stroke={c}
+                    strokeWidth={isSelected ? 0.85 : isHub ? 1.1 : 0.45}
+                    filter={isSelected ? 'url(#mg-glow-sm)' : undefined}
+                  />
+                  {/* Label */}
+                  <text x={n.x} y={n.y + (r > 5 ? 3 : 2.5)} textAnchor="middle"
+                    fontSize={isHub ? 3.5 : r > 5 ? 2.9 : 2.6}
+                    fill={isSelected ? c : isHub ? '#a5b4fc' : '#64748b'}
+                    fontWeight={isSelected || isHub ? '700' : '500'}>
+                    {(n as any).label ?? n.id}
                   </text>
                 </g>
               )
@@ -606,69 +696,81 @@ function MemoryGraph({ memories }: { memories: SessionMemory[] }) {
           </svg>
         </Panel>
 
-        <div className="space-y-4">
-          {/* Selected node detail */}
+        {/* ── Detail Panel ── */}
+        <div className="space-y-3">
           <Panel className="p-5 animate-fade-in">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-2.5 w-2.5 rounded-full" style={{ background: sel.color, boxShadow: `0 0 8px ${sel.color}` }} />
-              <h2 className="font-bold text-slate-100">{sel.id}</h2>
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ background: sel.color, boxShadow: `0 0 10px ${sel.color}` }}/>
+              <h2 className="text-base font-black text-slate-100">{sel.id}</h2>
             </div>
-            <p className="text-sm leading-6 text-slate-400">
-              {selMem?.summary ?? 'Core node in the DecisionLens knowledge corpus. Click any node to inspect its evidence and connections.'}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Pill tone="brand">{kindLabel((selMem?.kind ?? sel.type) as any)}</Pill>
-              <Pill tone="slate">{selMem?.source ?? 'seeded corpus'}</Pill>
-            </div>
-            {selMem && (
-              <blockquote className="evidence-quote mt-4">
-                {selMem.evidence}
-              </blockquote>
+            {detail && (
+              <>
+                <Pill tone={statusBadge.tone}>{statusBadge.label}</Pill>
+                <div className="mt-3 space-y-3">
+                  {detail.decisions.map(d => (
+                    <div key={d} className="rounded-xl p-3 text-xs text-slate-300 leading-5"
+                      style={{ background: `${sel.color}10`, border: `1px solid ${sel.color}20` }}>
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-start gap-2 text-xs text-slate-500">
+                    <span className="text-amber-400 flex-shrink-0 mt-0.5">⚖️</span>
+                    <span className="leading-5">{detail.tradeoff}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <span className="text-indigo-400">🔗</span>
+                    <code className="text-[10px] text-indigo-400">{detail.source}</code>
+                  </div>
+                </div>
+              </>
+            )}
+            {!detail && (
+              <p className="text-xs text-slate-500 leading-5">
+                Uploaded memory node. Click other nodes to explore the seeded corpus.
+              </p>
             )}
           </Panel>
 
-          {/* Knowledge object mix */}
-          <Panel className="p-5 animate-fade-in delay-100">
-            <div className="flex items-center gap-2 mb-4 text-sm font-bold text-slate-100">
-              <BarChart3 size={15} className="text-teal-400" />
-              Knowledge object mix
-            </div>
+          <Panel className="p-4 animate-fade-in delay-100">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-600">Legend</p>
             {[
-              { kind: 'Decision',      count: 3, color: '#6366f1' },
-              { kind: 'Tradeoff',      count: 2, color: '#14b8a6' },
-              { kind: 'Alternative',   count: 1, color: '#f59e0b' },
-              { kind: 'Arch Change',   count: 1, color: '#8b5cf6' },
-              { kind: 'Open Question', count: 1, color: '#f43f5e' },
-              ...memories.reduce<{ kind: string; count: number; color: string }[]>((acc, m) => {
+              { label: 'Hub',         color: '#6366f1' },
+              { label: 'Decision',    color: '#f59e0b' },
+              { label: 'Rejected',    color: '#f43f5e' },
+              { label: 'Memory',      color: '#818cf8' },
+              { label: 'Source',      color: '#14b8a6' },
+              { label: 'Uploaded',    color: '#10b981' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-2 py-1 text-xs text-slate-500">
+                <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: item.color }}/>
+                {item.label}
+              </div>
+            ))}
+          </Panel>
+
+          <Panel className="p-4 animate-fade-in delay-200">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-600">Knowledge Mix</p>
+            {[
+              { kind: 'Decisions',   count: 7,  color: '#f59e0b' },
+              { kind: 'Tradeoffs',   count: 5,  color: '#14b8a6' },
+              { kind: 'Alternatives',count: 3,  color: '#f43f5e' },
+              { kind: 'Sources',     count: 5,  color: '#818cf8' },
+              ...memories.reduce<{kind:string;count:number;color:string}[]>((acc,m) => {
                 const x = acc.find(a => a.kind === kindLabel(m.kind))
                 if (x) x.count++; else acc.push({ kind: kindLabel(m.kind), count: 1, color: '#10b981' })
                 return acc
               }, []),
             ].map(item => (
-              <div key={item.kind} className="mb-3">
-                <div className="mb-1 flex items-center justify-between text-xs">
+              <div key={item.kind} className="mb-2.5">
+                <div className="mb-1 flex items-center justify-between text-[11px]">
                   <span className="capitalize text-slate-500">{item.kind}</span>
                   <span className="font-semibold text-slate-300">{item.count}</span>
                 </div>
                 <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${Math.max(10, item.count * 25)}%`, background: item.color }} />
+                  <div className="progress-fill" style={{ width: `${Math.min(100, item.count * 14)}%`, background: item.color }}/>
                 </div>
-              </div>
-            ))}
-          </Panel>
-
-          {/* Legend */}
-          <Panel className="p-4 animate-fade-in delay-200">
-            <p className="mb-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Legend</p>
-            {[
-              { label: 'Decision',    color: '#f59e0b' },
-              { label: 'Alternative', color: '#f43f5e' },
-              { label: 'Memory hub',  color: '#6366f1' },
-              { label: 'Source',      color: '#10b981' },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-2 py-1 text-xs text-slate-500">
-                <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
-                {item.label}
               </div>
             ))}
           </Panel>
@@ -1451,16 +1553,128 @@ function SettingsPage() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   SEARCH COMMAND PALETTE
+═══════════════════════════════════════════════════════════════════ */
+const ALL_PAGES_META = [
+  { id: 'dashboard'  as Page, label: 'Overview',              sub: 'Main dashboard · stats · pipeline', emoji: '🏠' },
+  { id: 'graph'      as Page, label: 'Memory Graph',          sub: 'Interactive knowledge node map',    emoji: '🕸️' },
+  { id: 'ask'        as Page, label: 'Ask DecisionLens',      sub: 'Natural-language Q&A over memory',  emoji: '💬' },
+  { id: 'timeline'   as Page, label: 'Architecture Timeline', sub: 'Chronological decision history',    emoji: '🕰️' },
+  { id: 'recurring'  as Page, label: 'Recurring Discussions', sub: 'Topics that keep surfacing',        emoji: '🔁' },
+  { id: 'trends'     as Page, label: 'Technology Trends',     sub: 'Adoption & rejection signals',      emoji: '📈' },
+  { id: 'history'    as Page, label: 'Decision History',      sub: 'Trace a technology decision',       emoji: '📜' },
+  { id: 'upload'     as Page, label: 'Ingest Documents',      sub: 'Upload Markdown ADRs & RFCs',       emoji: '📤' },
+  { id: 'settings'   as Page, label: 'Settings',              sub: 'Configure API, brain, integrations',emoji: '⚙️' },
+]
+const QUICK_Q = ['Why did we choose Redis?', 'PostgreSQL RLS decision', 'Kafka vs Stripe events', 'Firebase rejected alternative']
+
+function SearchPalette({ onPage, onClose }: { onPage: (p: Page) => void; onClose: () => void }) {
+  const [q, setQ] = useState('')
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => { ref.current?.focus() }, [])
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+
+  const filtered = q.trim()
+    ? ALL_PAGES_META.filter(p => `${p.label} ${p.sub}`.toLowerCase().includes(q.toLowerCase()))
+    : ALL_PAGES_META
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[12vh]"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-lg animate-fade-in overflow-hidden rounded-2xl"
+        style={{ background: 'rgba(9,12,32,0.98)', border: '1px solid rgba(99,102,241,0.35)', boxShadow: '0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(99,102,241,0.08)' }}>
+        {/* Input */}
+        <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
+          <Search size={17} className="flex-shrink-0 text-indigo-400" />
+          <input ref={ref} value={q} onChange={e => setQ(e.target.value)}
+            placeholder="Search pages, technologies, decisions…"
+            className="flex-1 bg-transparent text-sm text-slate-200 placeholder-slate-600 outline-none" />
+          <button onClick={onClose}
+            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-slate-500 hover:text-slate-300">ESC</button>
+        </div>
+        {/* Quick searches */}
+        {!q.trim() && (
+          <div className="px-5 pt-3 pb-1">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">Quick searches</p>
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_Q.map(s => (
+                <button key={s} onClick={() => { onPage('ask'); onClose() }}
+                  className="rounded-full border border-indigo-500/20 bg-indigo-500/8 px-2.5 py-1 text-[11px] text-indigo-400 transition hover:bg-indigo-500/15">{s}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Results */}
+        <div className="max-h-72 overflow-y-auto p-3">
+          {!q.trim() && <p className="mb-1 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-600">Navigate to</p>}
+          {filtered.map(p => (
+            <button key={p.id} onClick={() => { onPage(p.id); onClose() }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-indigo-500/10">
+              <span className="text-xl flex-shrink-0">{p.emoji}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-200">{p.label}</p>
+                <p className="text-xs text-slate-600">{p.sub}</p>
+              </div>
+              <ChevronRight size={13} className="flex-shrink-0 text-slate-700" />
+            </button>
+          ))}
+          {filtered.length === 0 && <p className="py-8 text-center text-sm text-slate-600">No results for "{q}"</p>}
+        </div>
+        <div className="flex items-center gap-5 border-t px-5 py-2.5 text-[10px] text-slate-700"
+          style={{ borderColor: 'rgba(99,102,241,0.08)' }}>
+          <span>↵ to navigate</span><span>ESC to close</span><span>⌘K to reopen</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
    ROOT APP
 ═══════════════════════════════════════════════════════════════════ */
 export function App() {
   const [page, setPage] = useState<Page>('dashboard')
-  const [dark] = useState(true) // always dark — premium look
-  const [setDark] = useState(() => (_: boolean) => {})  // keep API compat
+  const [dark, setDarkState] = useState(true)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [apiStatus, setApiStatus] = useState<'checking' | 'live' | 'demo'>('checking')
   const [memories, setMemories] = useState<SessionMemory[]>([])
   const addMemories = (items: SessionMemory[]) => setMemories(cur => [...cur, ...items])
+
+  // ── Dark/light mode toggle ──
+  const applyTheme = (isDark: boolean) => {
+    const html = document.documentElement
+    const body = document.body
+    if (isDark) {
+      html.style.background = '#060b18'
+      body.style.background = '#060b18'
+      body.style.color = '#e2e8f0'
+      html.setAttribute('data-theme', 'dark')
+    } else {
+      html.style.background = '#eef2ff'
+      body.style.background = '#eef2ff'
+      body.style.color = '#1e1b4b'
+      html.setAttribute('data-theme', 'light')
+    }
+  }
+  const toggleDark = (v: boolean) => { setDarkState(v); applyTheme(v) }
+  useEffect(() => { applyTheme(true) }, [])
+
+  // ── ⌘K / Ctrl+K global shortcut ──
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true) }
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [])
 
   useEffect(() => {
     api.health().then(() => setApiStatus('live')).catch(() => setApiStatus('demo'))
@@ -1472,7 +1686,7 @@ export function App() {
   }, [toast])
 
   const content = useMemo(() => ({
-    dashboard: <Dashboard />,
+    dashboard: <Dashboard onSearch={() => setSearchOpen(true)} />,
     graph:     <MemoryGraph memories={memories} />,
     ask:       <Ask memories={memories} />,
     timeline:  <Timeline />,
@@ -1484,19 +1698,23 @@ export function App() {
   })[page], [page, memories])
 
   return (
-    <PageShell
-      page={page}
-      onPage={setPage}
-      dark={dark}
-      setDark={setDark as any}
-      apiStatus={apiStatus}
-    >
-      {content}
-      {toast && (
-        <div className="toast fixed bottom-6 right-6 z-50 max-w-sm">
-          {toast}
-        </div>
+    <>
+      <PageShell
+        page={page}
+        onPage={setPage}
+        dark={dark}
+        setDark={toggleDark}
+        apiStatus={apiStatus}
+        onSearchOpen={() => setSearchOpen(true)}
+      >
+        {content}
+        {toast && (
+          <div className="toast fixed bottom-6 right-6 z-50 max-w-sm">{toast}</div>
+        )}
+      </PageShell>
+      {searchOpen && (
+        <SearchPalette onPage={p => setPage(p)} onClose={() => setSearchOpen(false)} />
       )}
-    </PageShell>
+    </>
   )
 }

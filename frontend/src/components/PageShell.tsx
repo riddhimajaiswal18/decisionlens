@@ -1,8 +1,7 @@
 import {
-  Bell, BrainCircuit, ChevronRight, Clock3, DatabaseZap,
-  GitBranch, History, Home, Network, Search, Settings,
-  Sun, Moon, UploadCloud, Waves, Zap, Shield, TrendingUp,
-  Activity, BookOpen, Star
+  Bell, BookOpen, BrainCircuit, ChevronRight,
+  GitBranch, History, Home, Moon, Network, Search, Settings,
+  Sun, TrendingUp, UploadCloud, Waves, Zap,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -40,11 +39,12 @@ function StatusDot({ status }: { status: 'checking' | 'live' | 'demo' }) {
 }
 
 export function PageShell({
-  page, onPage, dark, setDark, apiStatus, children,
+  page, onPage, dark, setDark, apiStatus, children, onSearchOpen,
 }: {
   page: Page; onPage: (page: Page) => void
   dark: boolean; setDark: (v: boolean) => void
   apiStatus: 'checking' | 'live' | 'demo'; children: ReactNode
+  onSearchOpen?: () => void
 }) {
   return (
     <div className="app-grid min-h-screen text-slate-200">
@@ -53,7 +53,7 @@ export function PageShell({
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-6">
           <div
-            className="animate-brain relative grid h-10 w-10 place-items-center rounded-xl"
+            className="animate-brain relative grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl"
             style={{
               background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
               boxShadow: '0 4px 16px rgba(99,102,241,0.5)',
@@ -67,13 +67,16 @@ export function PageShell({
           </div>
         </div>
 
-        {/* Search hint */}
+        {/* ── Clickable search hint → opens command palette ── */}
         <div className="mx-4 mb-3">
-          <div className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/4 px-3 py-2 text-xs text-slate-500">
-            <Search size={12} />
+          <button
+            onClick={onSearchOpen}
+            className="flex w-full items-center gap-2 rounded-lg border border-white/8 bg-white/4 px-3 py-2 text-left text-xs text-slate-500 transition hover:border-indigo-500/30 hover:bg-indigo-500/8 hover:text-slate-400"
+          >
+            <Search size={12} className="flex-shrink-0" />
             <span>Search memory</span>
             <kbd className="ml-auto rounded bg-white/8 px-1.5 py-0.5 text-[10px]">⌘K</kbd>
-          </div>
+          </button>
         </div>
 
         {/* Nav */}
@@ -122,10 +125,10 @@ export function PageShell({
         />
       </aside>
 
-      {/* ── Main ── */}
+      {/* ── Main content ── */}
       <main className="flex min-h-screen flex-col lg:pl-64">
         {/* Topbar */}
-        <header className="topbar sticky top-0 z-30 flex h-14 items-center justify-between px-5 lg:px-8">
+        <header className="topbar sticky top-0 z-30 flex h-14 items-center gap-3 px-5 lg:px-8">
           {/* Mobile logo */}
           <button
             className="focus-ring flex items-center gap-2 lg:hidden"
@@ -135,23 +138,38 @@ export function PageShell({
             <span className="text-sm font-bold">DecisionLens</span>
           </button>
 
-          {/* Page breadcrumb (desktop) */}
+          {/* Breadcrumb (desktop) */}
           <div className="hidden items-center gap-2 text-sm text-slate-500 lg:flex">
             <BookOpen size={14} />
             <span>Engineering Memory OS</span>
             <ChevronRight size={12} />
-            <span className="text-slate-300 font-medium">
+            <span className="font-medium text-slate-300">
               {nav.find(n => n.id === page)?.emoji} {nav.find(n => n.id === page)?.label}
             </span>
           </div>
 
-          {/* Right actions */}
+          {/* Right side */}
           <div className="ml-auto flex items-center gap-2">
-            <StatusDot status={apiStatus} />
+            {/* Search pill in topbar (desktop) */}
             <button
-              aria-label="Toggle theme"
+              onClick={onSearchOpen}
+              aria-label="Open search"
+              className="focus-ring hidden items-center gap-2 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-slate-500 transition hover:border-indigo-500/30 hover:bg-indigo-500/8 hover:text-slate-400 lg:flex"
+            >
+              <Search size={13} />
+              <span>Search</span>
+              <kbd className="ml-1 rounded bg-white/8 px-1.5 py-0.5 text-[10px]">⌘K</kbd>
+            </button>
+
+            <StatusDot status={apiStatus} />
+
+            {/* Dark / Light toggle — fully functional */}
+            <button
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
               onClick={() => setDark(!dark)}
-              className="focus-ring rounded-lg p-2 text-slate-500 transition hover:bg-white/6 hover:text-slate-300"
+              title={dark ? 'Light mode' : 'Dark mode'}
+              className="focus-ring rounded-lg p-2 transition hover:bg-white/6"
+              style={{ color: dark ? '#94a3b8' : '#f59e0b' }}
             >
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
@@ -163,9 +181,8 @@ export function PageShell({
               <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-indigo-500" />
             </button>
             <div
-              className="grid h-8 w-8 place-items-center rounded-lg text-xs font-bold text-white"
+              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg text-xs font-bold text-white"
               style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}
-              title="DecisionLens User"
             >
               DL
             </div>
