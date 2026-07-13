@@ -2,18 +2,22 @@
 
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
-  --color-ink: #0b1020;
-  --color-surface: #f7f8fb;
-  --color-brand: #635bff;
+  --color-ink: #111827;
+  --color-surface: #f5f7fb;
+  --color-brand: #2563eb;
+  --color-teal: #0f766e;
+  --color-amber: #b45309;
+  --color-rose: #be123c;
 }
 
 * { box-sizing: border-box; }
-html { background: #f7f8fb; }
-body { margin: 0; min-width: 320px; background: #f7f8fb; color: #171b2d; }
+html { background: #f5f7fb; }
+body { margin: 0; min-width: 320px; background: #f5f7fb; color: #111827; }
 button, input { font: inherit; }
-::selection { background: #ddd9ff; color: #282154; }
+::selection { background: #dbeafe; color: #1e3a8a; }
 
-.app-grid { background-image: linear-gradient(rgba(99,91,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(99,91,255,.035) 1px, transparent 1px); background-size: 32px 32px; }
+.app-grid { background-image: linear-gradient(rgba(37,99,235,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(15,118,110,.026) 1px, transparent 1px); background-size: 32px 32px; }
 .dark .app-grid { background-image: linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px); }
-.panel { @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,.03)]; }
+.panel { @apply rounded-lg border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,.03)]; }
 .dark .panel { @apply border-slate-800 bg-slate-900 shadow-none; }
+.focus-ring { @apply outline-none ring-offset-2 ring-offset-white focus-visible:ring-2 focus-visible:ring-brand dark:ring-offset-slate-950; }

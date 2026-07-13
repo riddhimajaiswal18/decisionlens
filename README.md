@@ -5,12 +5,23 @@ DecisionLens turns scattered engineering conversations into searchable, evidence
 ## Product tour
 
 - **Overview** — decision, tradeoff, architecture-change, activity, and open-question signals.
+- **Memory graph** — an Obsidian-style interactive map of technologies, artifacts, decisions, and uploaded memories.
 - **Ask DecisionLens** — grounded answers with confidence, citations, and related artifacts.
 - **Architecture timeline** — the evolution from identity and RLS to caching, Kafka, and background workers.
 - **Recurring discussions / trends / decision history** — persistent context for the questions engineering teams revisit.
-- **Markdown upload** — sends ADRs and RFCs to the existing `POST /api/v1/upload/markdown` endpoint.
+- **Markdown upload** — sends ADRs and RFCs to the existing `POST /api/v1/upload/markdown` endpoint and creates local demo memories immediately for no-LLM testing.
 
 The dashboard uses polished fixture fallbacks for a smooth local demo. When Supermemory and the FastAPI service are configured, it automatically prefers live API responses.
+
+## Brain modes
+
+DecisionLens can run in three practical modes:
+
+- **Browser demo brain** — no LLM required. Markdown uploads with lines like `Decision: ...`, `Tradeoff: ...`, and `Alternative: ...` are parsed locally and appear immediately in the Memory graph and Ask flow.
+- **Local LLM brain** — set `EXTRACTION_PROVIDER=ollama` and run Ollama locally for backend extraction.
+- **Managed/company LLM brain** — the extractor boundary can be pointed at a hosted model provider in a production deployment.
+
+Supermemory is the long-term semantic memory layer. The LLM is the extraction brain that turns raw artifacts into structured knowledge before storage.
 
 ## System design
 

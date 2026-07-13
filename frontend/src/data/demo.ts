@@ -1,7 +1,7 @@
 import type { ArchitectureTimeline, DecisionHistory, HistoricalContext, RecurringDiscussion, TechnologyTrend } from '../types'
 
 const evidence = (content: string, artifact = 'slack:C-PLATFORM') => [{ content, original_snippet: content, source_location: 'Engineering discussion', artifact_reference: artifact, extraction_confidence: 0.92 }]
-const base = { id: 'demo', confidence: 0.92, timestamp: '2026-08-10T10:20:00Z', related_artifacts: ['slack:C-PLATFORM'], related_entities: ['Supabase'], evidence: evidence('Decision evidence grounded in a source artifact.') }
+const base = { id: 'demo', confidence: 0.92, timestamp: '2026-07-10T10:20:00Z', related_artifacts: ['slack:C-PLATFORM'], related_entities: ['Supabase'], evidence: evidence('Decision evidence grounded in a source artifact.') }
 
 export const demoTimeline: ArchitectureTimeline[] = [{ ...base, title: 'Architecture timeline', summary: 'The platform matured from hosted identity to event-driven operations.', events: [
   { timestamp: '2026-03-03T09:20:00Z', decision: 'Adopt Supabase Auth with PostgreSQL RLS for tenant authorization.', reason: 'Keeps policy close to tenant data.', confidence: .94, evidence: evidence('Use Supabase Auth and PostgreSQL RLS.', 'markdown:ADR-001') },
@@ -11,8 +11,8 @@ export const demoTimeline: ArchitectureTimeline[] = [{ ...base, title: 'Architec
 ] }]
 
 export const demoRecurring: RecurringDiscussion[] = [
-  { ...base, title: 'Recurring discussion: Redis', summary: 'Redis appears in session, cache, locking, and rate-limit decisions.', topic: 'Redis', discussion_count: 18, status: 'Adopted with guardrails', last_discussed: '2026-08-04T10:20:00Z' },
-  { ...base, title: 'Recurring discussion: Kafka', summary: 'Kafka remains the durable event boundary for billing and audit flows.', topic: 'Kafka', discussion_count: 14, status: 'Active', last_discussed: '2026-08-10T10:20:00Z' },
+  { ...base, title: 'Recurring discussion: Redis', summary: 'Redis appears in session, cache, locking, and rate-limit decisions.', topic: 'Redis', discussion_count: 18, status: 'Adopted with guardrails', last_discussed: '2026-07-04T10:20:00Z' },
+  { ...base, title: 'Recurring discussion: Kafka', summary: 'Kafka remains the durable event boundary for billing and audit flows.', topic: 'Kafka', discussion_count: 14, status: 'Active', last_discussed: '2026-07-10T10:20:00Z' },
   { ...base, title: 'Recurring discussion: PostgreSQL RLS', summary: 'Tenant isolation and support access are reviewed repeatedly.', topic: 'PostgreSQL RLS', discussion_count: 11, status: 'Approved', last_discussed: '2026-07-05T10:20:00Z' },
 ]
 
