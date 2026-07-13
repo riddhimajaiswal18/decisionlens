@@ -1,124 +1,510 @@
-# DecisionLens
+# 🧠 DecisionLens
 
-DecisionLens turns scattered engineering conversations into searchable, evidence-backed organizational intelligence. It captures GitHub, Slack, and Markdown context through the existing pipeline, then presents decisions, tradeoffs, trends, and architecture history in one focused workspace.
+<p align="center">
+  <strong>Engineering memory for teams that cannot afford to forget why decisions were made.</strong>
+</p>
 
-## Product tour
+<p align="center">
+  DecisionLens turns GitHub, Slack, and Markdown discussions into searchable, evidence-backed organizational intelligence powered by Supermemory.
+</p>
 
-- **Overview** — decision, tradeoff, architecture-change, activity, and open-question signals.
-- **Memory graph** — an Obsidian-style interactive map of technologies, artifacts, decisions, and uploaded memories.
-- **Ask DecisionLens** — grounded answers with confidence, citations, and related artifacts.
-- **Architecture timeline** — the evolution from identity and RLS to caching, Kafka, and background workers.
-- **Recurring discussions / trends / decision history** — persistent context for the questions engineering teams revisit.
-- **Markdown upload** — sends ADRs and RFCs to the existing `POST /api/v1/upload/markdown` endpoint and creates local demo memories immediately for no-LLM testing.
+<p align="center">
+  <img alt="Hackathon Ready" src="https://img.shields.io/badge/Hackathon-Ready-0f766e?style=for-the-badge" />
+  <img alt="React" src="https://img.shields.io/badge/React-TypeScript-2563eb?style=for-the-badge&logo=react" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi" />
+  <img alt="Supermemory" src="https://img.shields.io/badge/Supermemory-AI%20Memory-111827?style=for-the-badge" />
+  <img alt="Ollama" src="https://img.shields.io/badge/Ollama-Local%20LLM-f59e0b?style=for-the-badge" />
+</p>
 
-The dashboard uses polished fixture fallbacks for a smooth local demo. When Supermemory and the FastAPI service are configured, it automatically prefers live API responses.
+---
 
-## Brain modes
+## ✨ Product Poster
 
-DecisionLens can run in three practical modes:
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│   🧠 DecisionLens                                                            │
+│                                                                              │
+│   Raw engineering conversations                                              │
+│          ↓                                                                   │
+│   Evidence-backed decisions, tradeoffs, alternatives, timelines              │
+│          ↓                                                                   │
+│   A living memory graph for your engineering organization                    │
+│                                                                              │
+│   GitHub  •  Slack  •  Markdown  •  Supermemory  •  Ollama-ready             │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
-- **Browser demo brain** — no LLM required. Markdown uploads with lines like `Decision: ...`, `Tradeoff: ...`, and `Alternative: ...` are parsed locally and appear immediately in the Memory graph and Ask flow.
-- **Local LLM brain** — set `EXTRACTION_PROVIDER=ollama` and run Ollama locally for backend extraction.
-- **Managed/company LLM brain** — the extractor boundary can be pointed at a hosted model provider in a production deployment.
+> **One-line pitch:** DecisionLens is an engineering intelligence workspace that answers questions like _“Why did we choose Redis?”_ using the actual conversations, pull requests, ADRs, and tradeoffs behind the decision.
 
-Supermemory is the long-term semantic memory layer. The LLM is the extraction brain that turns raw artifacts into structured knowledge before storage.
+---
 
-## System design
+## 🚀 Why DecisionLens Exists
+
+Engineering teams make important decisions every day, but the reasoning often disappears inside:
+
+| Source | What Gets Lost | Why It Matters |
+| --- | --- | --- |
+| GitHub PRs | tradeoffs, rejected approaches, implementation rationale | future developers only see the final code |
+| Slack threads | informal decisions, unresolved concerns, ownership clues | valuable context becomes unsearchable noise |
+| ADRs/RFCs | historical architecture choices | documents become stale without linked evidence |
+| Onboarding chats | repeated explanations | senior engineers lose time repeating context |
+
+DecisionLens does not behave like a generic document search tool. It extracts **structured engineering knowledge** and keeps the original evidence attached.
+
+---
+
+## 🏆 Hackathon Value
+
+```mermaid
+quadrantChart
+  title "DecisionLens positioning"
+  x-axis "Generic search" --> "Engineering intelligence"
+  y-axis "Low memory" --> "Long-term memory"
+  quadrant-1 "Ideal hackathon zone"
+  quadrant-2 "Useful but shallow"
+  quadrant-3 "Basic tools"
+  quadrant-4 "Memory without domain meaning"
+  "Keyword search": [0.18, 0.25]
+  "Static docs": [0.30, 0.36]
+  "Generic RAG bot": [0.48, 0.58]
+  "DecisionLens": [0.86, 0.88]
+```
+
+DecisionLens demonstrates a concrete Supermemory use case:
+
+```text
+Raw engineering artifacts → structured knowledge objects → Supermemory → decision intelligence UI
+```
+
+---
+
+## 🧩 What It Can Do Now
+
+| Capability | Status | Description |
+| --- | --- | --- |
+| 📊 Overview dashboard | ✅ Working | high-level engineering memory metrics and demo path |
+| 🕸️ Memory graph | ✅ Working | Obsidian-style interactive map of decisions, technologies, artifacts, and uploaded memories |
+| 💬 Ask DecisionLens | ✅ Working | asks questions against live API data or demo/local memories |
+| 🕰️ Architecture timeline | ✅ Working | shows source-grounded decision evolution |
+| 🔁 Recurring discussions | ✅ Working | identifies topics that keep returning |
+| 📈 Technology trends | ✅ Working | compares adoption/rejection signals |
+| 📜 Decision history | ✅ Working | traces how a technology or decision evolved |
+| 📤 Markdown upload | ✅ Working | queues files through FastAPI and creates immediate local demo memories |
+| 🧠 Local browser demo brain | ✅ Working | tests extraction without Ollama or Supermemory |
+| 🦙 Ollama extraction | 🟡 Supported | backend extraction provider is implemented; requires local model setup |
+| 🧬 Supermemory integration | 🟡 Supported | client, serializer, seed path, and intelligence endpoints exist; requires configured service |
+| 🔌 GitHub/Slack connectors | 🟡 Basic | connector code and sample seeding exist; production OAuth/app setup is future work |
+| 🧱 Notion connector | ⚪ Planned | not implemented yet, but fits the Artifact connector contract |
+
+---
+
+## 🖼️ Product Tour
+
+| Area | Experience |
+| --- | --- |
+| **Overview** | polished command center for judges and teammates |
+| **Memory Graph** | interactive visual map inspired by Obsidian knowledge graphs |
+| **Ask DecisionLens** | source-grounded answers with evidence and confidence |
+| **Timeline** | architecture evolution from identity to caching to event pipelines |
+| **Trends** | adoption/rejection signals across technologies |
+| **Upload** | instant no-LLM demo extraction from Markdown |
+
+### Demo UI Shape
+
+```mermaid
+mindmap
+  root((DecisionLens))
+    Overview
+      Metrics
+      Source pipeline
+      Judge demo path
+    Memory Graph
+      Technologies
+      Decisions
+      Uploaded memories
+      Evidence panel
+    Ask
+      Historical context
+      Citations
+      Local demo memories
+    Intelligence
+      Timeline
+      Recurring topics
+      Trends
+      Decision history
+    Ingestion
+      Markdown
+      GitHub samples
+      Slack samples
+```
+
+---
+
+## 🏗️ System Architecture
 
 ```mermaid
 flowchart LR
-  G[GitHub] --> C[Connectors]
-  S[Slack] --> C
-  M[Markdown] --> C
-  C --> B[Ingestion Buffer]
-  B --> I[Ingestion Engine]
-  I --> Q[Queue]
-  Q --> E[EKPP]
-  E --> SM[Supermemory]
-  SM --> IE[Engineering Intelligence Engine]
-  IE --> API[FastAPI]
-  API --> UI[React dashboard]
+  subgraph Sources["Engineering Sources"]
+    GH["GitHub PRs / commits"]
+    SL["Slack threads"]
+    MD["Markdown ADRs / RFCs"]
+    NT["Notion docs (planned)"]
+  end
+
+  subgraph Ingestion["DecisionLens Ingestion"]
+    C["Source connectors"]
+    B["Ingestion buffer"]
+    I["Ingestion engine"]
+    Q["Artifact queue"]
+  end
+
+  subgraph Extraction["Engineering Knowledge Processing Pipeline"]
+    LLM["LLM / Ollama / demo extractor"]
+    KO["Knowledge objects"]
+    EV["Evidence validation"]
+  end
+
+  subgraph Memory["Memory Layer"]
+    SM["Supermemory"]
+    SR["Semantic retrieval"]
+  end
+
+  subgraph Product["DecisionLens Product"]
+    API["FastAPI"]
+    UI["React dashboard"]
+    GRAPH["Memory graph"]
+    ASK["Ask DecisionLens"]
+  end
+
+  GH --> C
+  SL --> C
+  MD --> C
+  NT -. future .-> C
+  C --> B --> I --> Q --> LLM --> KO --> EV --> SM --> SR --> API --> UI
+  UI --> GRAPH
+  UI --> ASK
 ```
 
-The backend layering is intentionally preserved: the dashboard only consumes the established FastAPI endpoints.
+---
 
-## Repository layout
+## 🧠 Brain Modes
 
-```text
-backend/                 FastAPI, ingestion, memory, and intelligence contracts
-frontend/                React + TypeScript + Vite + Tailwind dashboard
-sample-data/             GitHub, Slack, and Markdown demo corpus
-scripts/seed.py          Connector-to-Supermemory demo seed pipeline
-docs/demo.md             Judge-ready demo flow and talking points
-docs/adr/                Architecture decision records
+DecisionLens is designed so you can demo quickly and scale later.
+
+```mermaid
+flowchart TB
+  A["Choose a brain mode"]
+  A --> B["Browser demo brain"]
+  A --> C["Local Ollama brain"]
+  A --> D["Managed/company LLM brain"]
+
+  B --> B1["No setup"]
+  B --> B2["Parses Markdown lines like Decision: ..."]
+  B --> B3["Updates Memory Graph immediately"]
+
+  C --> C1["Private local extraction"]
+  C --> C2["Runs qwen3:8b or another Ollama model"]
+  C --> C3["Used by backend EKPP"]
+
+  D --> D1["Enterprise model provider"]
+  D --> D2["Best for production scale"]
 ```
 
-## Quick start
+| Mode | Requires LLM? | Requires Supermemory? | Best For |
+| --- | --- | --- | --- |
+| Browser demo brain | ❌ No | ❌ No | hackathon demo, quick testing |
+| Ollama brain | ✅ Local | 🟡 Recommended | privacy-first local extraction |
+| Managed LLM brain | ✅ Hosted | ✅ Yes | production/company deployment |
 
-1. Copy the environment template and set the Supermemory settings used by your deployment.
+**Supermemory is the long-term semantic memory layer.**
+**The brain is the extractor that turns raw artifacts into structured knowledge before storage.**
 
-   ```bash
-   cp .env.example .env
-   ```
+---
 
-2. Start the full stack.
+## 📊 Demo Intelligence Snapshot
 
-   ```bash
-   docker compose up --build
-   ```
+```mermaid
+pie title Demo knowledge object mix
+  "Decisions" : 48
+  "Tradeoffs" : 31
+  "Architecture changes" : 16
+  "Recurring topics" : 18
+  "Open questions" : 6
+```
 
-3. Open the dashboard at [http://localhost:5173](http://localhost:5173). The API health endpoint is [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health).
+```mermaid
+xychart-beta
+  title "Engineering discussion volume by technology"
+  x-axis ["Redis", "PostgreSQL", "Kafka", "Supabase", "Firebase"]
+  y-axis "Mentions" 0 --> 30
+  bar [24, 21, 17, 14, 6]
+```
 
-4. Seed realistic organizational memory once `SUPERMEMORY_BASE_URL` is configured.
+---
 
-   ```bash
-   python scripts/seed.py
-   ```
+## ⚡ Quick Start
 
-## Local development
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/riddhimajaiswal18/decisionlens.git
+cd decisionlens
+cp .env.example .env
+```
+
+### 2. Run with Docker
+
+```bash
+docker compose up --build
+```
+
+Open:
+
+- Dashboard: [http://localhost:5173](http://localhost:5173)
+- API health: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+
+### 3. Run locally without Docker
+
+Backend:
 
 ```bash
 python -m pip install -r requirements.txt
-uvicorn backend.app.main:app --reload
-
-cd frontend
-pnpm install
-pnpm dev
+python -m uvicorn backend.app.main:app --reload
 ```
 
-Set `VITE_API_BASE_URL` when the API runs anywhere other than `http://localhost:8000/api/v1`.
+Frontend:
 
-## Local LLM extraction
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-DecisionLens keeps EKPP independent of model vendors through its `StructuredExtractionClient`
-boundary. Set `EXTRACTION_PROVIDER=ollama` to use the asynchronous local Ollama provider;
-set `EXTRACTION_PROVIDER=demo` for the deterministic, offline fixture extractor.
+---
 
-1. Install [Ollama](https://ollama.com/), then run `ollama serve`.
-2. Download the default model with `ollama pull qwen3:8b`.
-3. Configure `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, and `OLLAMA_TIMEOUT` in `.env` as needed.
-4. Run `python scripts/seed.py`.
+## 🧪 Test Without LLM or Supermemory
 
-The Ollama provider requests JSON mode and validates every returned fact against the existing
-Pydantic contracts. It accepts a fact only when each evidence excerpt occurs verbatim in the
-source artifact. Invalid JSON is repaired once; unavailable, timed-out, rate-limited, or
-malformed responses become empty extractions so ingestion continues. Prompt templates are
-held in `backend/app/memory/extractors/prompts.py` and can be overridden with
-`EXTRACTION_PROMPT_DIRECTORY` using files such as `decision.txt`.
+This is the fastest and safest hackathon demo path.
 
-## Screenshots
+1. Start the frontend and backend.
+2. Open **Markdown upload**.
+3. Upload a `.md` file like this:
 
-| Overview | Ask DecisionLens | Architecture timeline |
-| --- | --- | --- |
-| _Add dashboard screenshot here_ | _Add chat screenshot here_ | _Add timeline screenshot here_ |
+```md
+# Session Revocation ADR
 
-## Demo
+Decision: Use Redis for immediate session revocation.
+Tradeoff: Redis adds operational ownership.
+Alternative: Fully stateless JWT sessions.
+Architecture Change: Session middleware checks Redis before tenant queries.
+Open Question: Should enterprise sessions use a shorter TTL?
+```
 
-Use the complete [demo guide](docs/demo.md) for a guided walkthrough, useful audience questions, and expected outputs.
+4. Open **Memory graph**.
+5. Click the uploaded memory node.
+6. Open **Ask DecisionLens** and ask:
 
-## Future work
+```text
+Why did we choose Redis?
+```
 
-- Persist and expose ingestion job status for the upload progress view.
-- Add authenticated workspace configuration and source-management controls.
-- Add richer visualizations for change impact and entity relationships.
-- Support real-time response streaming when the backend exposes a streaming endpoint.
+The browser demo brain will parse the Markdown and create local session memories immediately.
+
+---
+
+## 🦙 Test With Ollama
+
+Use Ollama when you want local LLM extraction through the backend EKPP.
+
+```bash
+ollama serve
+ollama pull qwen3:8b
+```
+
+Set `.env`:
+
+```env
+EXTRACTION_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen3:8b
+OLLAMA_TIMEOUT=120
+```
+
+Then run:
+
+```bash
+python scripts/seed.py
+```
+
+---
+
+## 🧬 Test With Supermemory
+
+Set `.env`:
+
+```env
+SUPERMEMORY_BASE_URL=
+SUPERMEMORY_API_KEY=
+SUPERMEMORY_CONTAINER_TAG=decisionlens
+```
+
+Seed the demo corpus:
+
+```bash
+python scripts/seed.py
+```
+
+The dashboard automatically prefers live FastAPI/Supermemory responses when available and falls back to polished demo data when they are not.
+
+---
+
+## 🔌 Connector Status
+
+| Connector | Current Status | How To Use Today | Production Work Needed |
+| --- | --- | --- | --- |
+| Markdown | ✅ Working | upload `.md` / `.mdx` files or seed sample data | ingestion job status UI |
+| GitHub | 🟡 Basic | sample PRs, commits, comments via seed script | GitHub OAuth/app installation |
+| Slack | 🟡 Basic | sample Slack threads via seed script | Slack bot, events, permissions |
+| Notion | ⚪ Planned | not available yet | Notion API connector |
+| Meetings | ⚪ Future | not available yet | transcript ingestion |
+
+---
+
+## 🧭 Judge Demo Script
+
+```mermaid
+journey
+  title DecisionLens Hackathon Demo
+  section First impression
+    Open Overview: 5: Presenter
+    Explain the problem: 5: Presenter
+  section Visual wow
+    Open Memory Graph: 5: Presenter
+    Click decision nodes: 5: Presenter
+  section End-to-end workflow
+    Upload Markdown ADR: 5: Presenter
+    Show instant extracted memories: 5: Presenter
+    Ask about uploaded decision: 5: Presenter
+  section Supermemory story
+    Explain memory layer: 4: Presenter
+    Show architecture diagram: 4: Presenter
+```
+
+Recommended questions:
+
+| Question | What DecisionLens Should Show |
+| --- | --- |
+| Why did we choose Redis? | decision, tradeoff, alternative, evidence |
+| Why did we use PostgreSQL RLS? | architecture rationale and history |
+| What alternatives were rejected? | Firebase/stateless JWT/Kafka alternatives |
+| What keeps coming up repeatedly? | recurring discussion topics |
+
+---
+
+## 📁 Repository Layout
+
+```text
+decisionlens/
+├── backend/                 FastAPI, ingestion, memory, intelligence contracts
+├── frontend/                React + TypeScript + Vite + Tailwind dashboard
+├── sample-data/             GitHub, Slack, and Markdown demo corpus
+├── scripts/seed.py          Connector → EKPP → Supermemory demo seed pipeline
+├── docs/demo.md             Judge-ready demo guide
+├── docs/adr/                Architecture decision records
+├── docker-compose.yml       Full-stack local deployment
+└── README.md                Product and technical guide
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, Lucide icons |
+| Backend | FastAPI, Pydantic, async service contracts |
+| Memory | Supermemory integration boundary |
+| Extraction | Browser demo extractor, Ollama provider, structured extraction contracts |
+| Sources | Markdown, GitHub samples, Slack samples |
+| Deployment | Docker Compose, local dev servers |
+
+---
+
+## ✅ Verification
+
+Current validation commands:
+
+```bash
+cd frontend
+npm run build
+```
+
+```bash
+python -m pytest tests
+python -m compileall backend scripts
+```
+
+Expected current status:
+
+| Check | Status |
+| --- | --- |
+| Frontend production build | ✅ Passing |
+| Python tests | ✅ Passing |
+| Backend/script compile | ✅ Passing |
+| Local API health | ✅ Working |
+| Markdown upload demo flow | ✅ Working |
+
+---
+
+## 📈 Roadmap
+
+```mermaid
+gantt
+  title DecisionLens Roadmap
+  dateFormat  YYYY-MM-DD
+  section Hackathon
+  Polished dashboard             :done,    a1, 2026-07-10, 2d
+  Memory graph                   :done,    a2, 2026-07-12, 1d
+  Browser demo brain             :done,    a3, 2026-07-12, 1d
+  section Next
+  GitHub OAuth installation      :active,  b1, 2026-07-14, 4d
+  Slack app event ingestion      :         b2, 2026-07-16, 5d
+  Persistent ingestion jobs      :         b3, 2026-07-18, 5d
+  Notion connector               :         b4, 2026-07-22, 4d
+  Workspace auth and permissions :         b5, 2026-07-24, 6d
+```
+
+---
+
+## 🔮 Future Work
+
+- Add authenticated workspaces and role-based access.
+- Add real GitHub OAuth installation flow.
+- Add Slack app event subscription and permission management.
+- Add Notion connector.
+- Persist ingestion job status and expose upload progress.
+- Add streaming answers and richer evidence navigation.
+- Add production deployment templates.
+- Add screenshot/video assets for the final hackathon submission.
+
+---
+
+## 💡 Final Vision
+
+DecisionLens is not just a dashboard. It is a memory layer for engineering organizations.
+
+```mermaid
+flowchart TB
+  A["New engineer asks: Why was this built this way?"]
+  B["DecisionLens searches engineering memory"]
+  C["Supermemory retrieves relevant knowledge"]
+  D["DecisionLens explains decisions, tradeoffs, alternatives"]
+  E["Engineer sees source evidence"]
+  F["Team stops losing institutional knowledge"]
+
+  A --> B --> C --> D --> E --> F
+```
+
+> **DecisionLens helps teams remember not only what they built, but why they built it.**
