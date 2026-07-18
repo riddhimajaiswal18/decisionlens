@@ -18,6 +18,16 @@
 
 ---
 
+## 🔗 Submission Links
+
+| Item | Link |
+| --- | --- |
+| 🚀 Live deployment | [decision-lens.netlify.app](https://agent-6a54fce0eb46362cdafc6cd7--decision-lens.netlify.app/) |
+| 💻 Public GitHub repository | [github.com/riddhimajaiswal18/decisionlens](https://github.com/riddhimajaiswal18/decisionlens.git) |
+| 🐦 Tweet / X post | [x.com/i/status/2078329346322796996](https://x.com/i/status/2078329346322796996) |
+
+---
+
 ## ✨ Product Poster
 
 ```text
