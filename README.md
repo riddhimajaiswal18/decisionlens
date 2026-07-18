@@ -28,6 +28,26 @@
 
 ---
 
+## 📝 Submission Answers
+
+### One-line pitch
+
+DecisionLens transforms scattered engineering discussions into a searchable, living organizational memory that preserves the reasoning behind every technical decision.
+
+### What did we build?
+
+DecisionLens is an AI-powered engineering knowledge platform that captures architecture decisions, technical discussions, and project context from sources like GitHub, Slack, and Markdown documents. It processes this information into structured, evidence-backed knowledge objects, enabling engineers to understand not just what decisions were made, but why they were made. By preserving organizational knowledge over time, DecisionLens reduces repeated discussions, accelerates onboarding, and helps teams make better-informed engineering decisions.
+
+### How does it use Supermemory Local?
+
+Supermemory Local serves as the core memory infrastructure of DecisionLens. After engineering knowledge is extracted from connected sources, DecisionLens transforms it into structured, evidence-backed knowledge objects and stores them in Supermemory Local for long-term semantic memory. Every query made through DecisionLens retrieves relevant historical context from Supermemory Local, allowing engineers to understand the reasoning, tradeoffs, and evolution behind past technical decisions. By running on Supermemory Local, organizational knowledge can remain private, self-hosted, and under the company's control while still enabling persistent, context-aware engineering intelligence.
+
+### Public repository
+
+[https://github.com/riddhimajaiswal18/decisionlens.git](https://github.com/riddhimajaiswal18/decisionlens.git)
+
+---
+
 ## ✨ Product Poster
 
 ```text
